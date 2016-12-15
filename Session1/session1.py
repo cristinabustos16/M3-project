@@ -4,9 +4,10 @@ import cPickle
 import time
 from sklearn.preprocessing import StandardScaler
 from sklearn import svm
+from sklearn.decomposition import PCA
 
 
-def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr):
+def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr, pca):
     numtestimages=0
     numcorrect=0
     for i in range(len(test_images_filenames)):
@@ -14,7 +15,12 @@ def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr):
         ima=cv2.imread(filename)
         gray=cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
         kpt,des=SIFTdetector.detectAndCompute(gray,None)
-        predictions = clf.predict(stdSlr.transform(des))
+        # Scale descriptors:
+        des_scaled = stdSlr.transform(des)
+        # Apply PCA to descriptors:
+        des_pca = pca.transform(des_scaled)
+        # Classify:
+        predictions = clf.predict(des_pca)
         values, counts = np.unique(predictions, return_counts=True)
         predictedclass = values[np.argmax(counts)]
         print 'image '+filename+' was from class '+test_labels[i]+' and was predicted '+predictedclass
@@ -24,10 +30,9 @@ def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr):
     print 'Final accuracy: ' + str(numcorrect*100.0/numtestimages)
 
 
-def train_classifier(D, L, stdSlr):
-    D_scaled = stdSlr.transform(D)
+def train_classifier(X, L):
     print 'Training the SVM classifier...'
-    clf = svm.SVC(kernel='linear', C=1).fit(D_scaled, L)
+    clf = svm.SVC(kernel='linear', C=1).fit(X, L)
     print 'Done!'
     return clf
 
@@ -79,14 +84,26 @@ for i in range(1,len(Train_descriptors)):
 
 # Prepare the scaler:
 stdSlr = StandardScaler().fit(D)
+D_scaled = stdSlr.transform(D)
+
+# PCA:
+print "Applying principal components analysis..."
+ncomp_pca = 20
+pca = PCA(n_components = ncomp_pca)
+pca.fit(D_scaled)
+D_pca = pca.transform(D_scaled)
+print "Explained variance with ", ncomp_pca , \
+    " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
 
 # Train a linear SVM classifier
-clf = train_classifier(D, L, stdSlr)
+clf = train_classifier(D_pca, L)
 
 # get all the test data and predict their labels
-test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr)
+test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr, pca)
 
 end=time.time()
 print 'Done in '+str(end-start)+' secs.'
 
 ## 38.78% in 797 secs.
+
+## With 20 principal components: 30.86% in 362 sec,
