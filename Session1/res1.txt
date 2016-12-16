@@ -1,0 +1,2 @@
+kernel = linear, C = 2.0, sigma = 1
+accuracy = 30.8550185874    running_time = 770.259000063

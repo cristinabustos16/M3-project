@@ -1,6 +1,9 @@
 # Launching program with several options for SVM.
 from session1 import SVM_options_class
 from session1 import train_and_test
+from joblib import Parallel, delayed
+
+from math import sqrt
 
 
 # General options, common in al calls:
@@ -30,6 +33,7 @@ SVM_options[3].kernel = 'rbf'
 SVM_options[3].sigma = 2
 
 
+
 # Call main program:
 for i in range(4):
     accuracy, running_time = train_and_test(scale, apply_pca, ncomp_pca, \
@@ -39,6 +43,7 @@ for i in range(4):
     line = 'accuracy = ' + str(accuracy) + '    running_time = ' + str(running_time)
     fid.write(line)
     fid.close()
+
 
 
 
