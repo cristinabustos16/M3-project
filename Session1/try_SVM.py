@@ -1,6 +1,12 @@
 # Run the code with a certain configuration for the SVM, and write the results.
 # This way, executing this script separately at the same time, with different
 # options, the SVM tunning can be performed in parallel.
+#
+# This script must be called with some arguments:
+#   arg1: name of the file to write the results (with .txt).
+#   arg2: kernel type for the SVM (linear, rbf).
+#   arg3: Cost parameter for SVM.
+#   arg4: In case of rbf kernel, ths is sigma.
 from session1 import SVM_options_class
 from session1 import train_and_test
 import sys
