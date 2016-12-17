@@ -42,9 +42,10 @@ def train_classifier(X, L, SVM_options):
     print 'Training the SVM classifier...'
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
-        clf = svm.SVC(kernel='linear', C = SVM_options.C).fit(X, L)
+        clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1).fit(X, L)
     elif(SVM_options.kernel == 'rbf'):
-        clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma).fit(X, L)
+        clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma, \
+                random_state = 1).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'

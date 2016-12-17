@@ -1,1 +1,0 @@
-accuracy = 13.1350681537    running_time = 333.647000074
