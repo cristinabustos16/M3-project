@@ -42,11 +42,12 @@ def train_classifier(X, L, SVM_options):
     print 'Training the SVM classifier...'
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
-        clf = svm.SVC(kernel='linear', C = SVM_options.C).fit(X, L)
+        clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1).fit(X, L)
     elif(SVM_options.kernel == 'poly'):
         clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, coef0 = SVM_options.coef0).fit(X,L)
     elif(SVM_options.kernel == 'rbf'):
-        clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma).fit(X, L)
+        clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma, \
+                random_state = 1).fit(X, L)
     elif(SVM_options.kernel == 'sigmoid'):
         clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0).fit(X, L)
     else:
@@ -107,14 +108,14 @@ def train_and_test(scale, apply_pca, ncomp_pca, nfeatures, descriptor, SVM_optio
         L=np.hstack((L,np.array([Train_label_per_descriptor[i]]*Train_descriptors[i].shape[0])))
 
     # Scale input data, and keep the scaler for later:
+    stdSlr = StandardScaler().fit(D)
     if(scale == 1):
-        stdSlr = StandardScaler().fit(D)
         D = stdSlr.transform(D)
 
     # PCA:
+    pca = PCA(n_components = ncomp_pca)
     if(apply_pca == 1):
         print "Applying principal components analysis..."
-        pca = PCA(n_components = ncomp_pca)
         pca.fit(D)
         D = pca.transform(D)
         print "Explained variance with ", ncomp_pca , \
