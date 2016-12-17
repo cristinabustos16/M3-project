@@ -9,15 +9,11 @@ if __name__ == '__main__':
     # Fixed parameters:
     SVM_kernel = 'rbf'
     SVM_C = 1
-    ncomp_pca = 50
-    nfeatures = 100
-    scale = 1
-    apply_pca = 1
-    detector = 'SIFT'
+    
+    # Other parameters are specified in try_SVM_full.py
 
     # Range of parameters to try:
-    SVM_sigma_vec = (0.006, 0.007, 0.008, 0.009, 0.01, 0.011, 0.012, 0.015, \
-                        0.02, 0.03)
+    SVM_sigma_vec = (0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1)
                     
     # Get the environment variables .............................
     task_id = int(os.environ['SGE_TASK_ID'])

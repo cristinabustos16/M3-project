@@ -176,7 +176,7 @@ class SVM_options_class:
 
 # Select options:
 SVM_options = SVM_options_class()
-ncomp_pca = 20
+ncomp_pca = 50
 SIFT_nfeatures = 100
 scale = 1
 apply_pca = 1

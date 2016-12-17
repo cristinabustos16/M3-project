@@ -104,14 +104,14 @@ def train_and_test(scale, apply_pca, ncomp_pca, nfeatures, descriptor, SVM_optio
         L=np.hstack((L,np.array([Train_label_per_descriptor[i]]*Train_descriptors[i].shape[0])))
 
     # Scale input data, and keep the scaler for later:
+    stdSlr = StandardScaler().fit(D)
     if(scale == 1):
-        stdSlr = StandardScaler().fit(D)
         D = stdSlr.transform(D)
 
     # PCA:
+    pca = PCA(n_components = ncomp_pca)
     if(apply_pca == 1):
         print "Applying principal components analysis..."
-        pca = PCA(n_components = ncomp_pca)
         pca.fit(D)
         D = pca.transform(D)
         print "Explained variance with ", ncomp_pca , \
