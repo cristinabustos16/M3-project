@@ -43,8 +43,12 @@ def train_classifier(X, L, SVM_options):
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
         clf = svm.SVC(kernel='linear', C = SVM_options.C).fit(X, L)
+    elif(SVM_options.kernel == 'poly'):
+        clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, coef0 = SVM_options.coef0).fit(X,L)
     elif(SVM_options.kernel == 'rbf'):
         clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma).fit(X, L)
+    elif(SVM_options.kernel == 'sigmoid'):
+        clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
@@ -133,8 +137,9 @@ def train_and_test(scale, apply_pca, ncomp_pca, nfeatures, descriptor, SVM_optio
 
 class SVM_options_class:
 # Options for SVM classifier.
-    kernel = 'linear'
+    kernel = 'poly'
     C = 1
     sigma = 1
-
+    degree = 3
+    coef0 = 0
 
