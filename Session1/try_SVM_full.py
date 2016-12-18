@@ -43,7 +43,7 @@ def alternative_npunique(predictions):
 
 
 def test_system(test_images_filenames, test_labels, clf, detector, stdSlr, pca, \
-                apply_pca, scale):
+                apply_pca, scale, SVM_probability):
 # Use the test data to measure the performance of the adjusted classifier.
     numtestimages=0
     numcorrect=0
@@ -82,16 +82,18 @@ def train_classifier(X, L, SVM_options):
     print 'Training the SVM classifier...'
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
-        clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1).fit(X, L)
+        clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1, \
+                probability = SVM_options.probability).fit(X, L)
     elif(SVM_options.kernel == 'poly'):
         clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, \
-                coef0 = SVM_options.coef0, random_state = 1).fit(X,L)
+                coef0 = SVM_options.coef0, random_state = 1, \
+                probability = SVM_options.probability).fit(X,L)
     elif(SVM_options.kernel == 'rbf'):
         clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma, \
-                random_state = 1).fit(X, L)
+                random_state = 1, probability = SVM_options.probability).fit(X, L)
     elif(SVM_options.kernel == 'sigmoid'):
         clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0, \
-                random_state = 1).fit(X, L)
+                random_state = 1, probability = SVM_options.probability).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'

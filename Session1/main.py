@@ -6,12 +6,12 @@ from session1 import train_and_test
 
 # Select options:
 SVM_options = SVM_options_class()
-SVM_options.kernel = 'rbf'
+SVM_options.kernel = 'poly'
 SVM_options.sigma = 0.01
-SVM_options.probability = 0
+SVM_options.probability = 1
 detector_options = detector_options_class()
-detector_options.descriptor = 'SIFT'
-ncomp_pca = 10
+detector_options.descriptor = 'ORB'
+ncomp_pca = 5
 scale = 1
 apply_pca = 1
 

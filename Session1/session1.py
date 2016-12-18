@@ -8,6 +8,31 @@ from sklearn.decomposition import PCA
 import sys
 
 
+def alternative_npunique(predictions):
+    # votes for forest:
+    nforest = np.sum(predictions == 'forest')
+    # votes for Opencountry:
+    nOpencountry = np.sum(predictions == 'Opencountry')
+    # votes for inside_city:
+    ninside_city = np.sum(predictions == 'inside_city')
+    # votes for coast:
+    ncoast = np.sum(predictions == 'coast')
+    # votes for highway:
+    nhighway = np.sum(predictions == 'highway')
+    # votes for mountain:
+    nmountain = np.sum(predictions == 'mountain')
+    # votes for street:
+    nstreet = np.sum(predictions == 'street')
+    # votes for tallbuilding:
+    ntallbuilding = np.sum(predictions == 'tallbuilding')
+    # Arrays to return:
+    counts = (nforest, nOpencountry, ninside_city, ncoast, nhighway, \
+            nmountain, nstreet, ntallbuilding)
+    values = ('forest', 'Opencountry', 'inside_city', 'coast', \
+                'highway', 'mountain', 'street', 'tallbuilding')
+    return values, counts
+
+
 def test_system(test_images_filenames, test_labels, clf, detector, stdSlr, pca, \
                 apply_pca, scale, SVM_probability):
 # Use the test data to measure the performance of the adjusted classifier.
@@ -27,7 +52,8 @@ def test_system(test_images_filenames, test_labels, clf, detector, stdSlr, pca, 
         # Classify:
         if(SVM_probability == 0):
             predictions = clf.predict(des)
-            values, counts = np.unique(predictions, return_counts=True)
+            #values, counts = np.unique(predictions, return_counts=True)
+            values, counts = alternative_npunique(predictions)
             predictedclass = values[np.argmax(counts)]
         else:
             predictions = clf.predict_proba(des)
