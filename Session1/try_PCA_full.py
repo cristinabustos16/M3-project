@@ -1,12 +1,9 @@
-# Run the code with a certain configuration for the SVM, and write the results.
-# This way, executing this script separately at the same time, with different
-# options, the SVM tunning can be performed in parallel.
+# Run the code with a certain number of principal componentes, and write
+# the results.
 #
 # This script must be called with some arguments:
 #   arg1: name of the file to write the results (with .txt).
-#   arg2: kernel type for the SVM (linear, rbf).
-#   arg3: Cost parameter for SVM.
-#   arg4: In case of rbf kernel, this is sigma.
+#   arg2: number of principal components.
 import cv2
 import numpy as np
 import cPickle
@@ -176,19 +173,18 @@ class SVM_options_class:
 
 # Select options:
 SVM_options = SVM_options_class()
-ncomp_pca = 10
+SVM_options.kernel = 'rbf'
+SVM_options.C = 1
+SVM_options.sigma = 0.01
 SIFT_nfeatures = 100
 scale = 1
 apply_pca = 1
     
 # Read file name for writing results:
 filename = sys.argv[1]
-
-# Read options for SVM:
-SVM_options.kernel = sys.argv[2]
-SVM_options.C = float(sys.argv[3])
-if SVM_options.kernel == 'rbf':
-    SVM_options.sigma = float(sys.argv[4])
+    
+# Read number of principal components:
+ncomp_pca = int(sys.argv[2])
 
 # Call main program:
 accuracy, running_time = train_and_test(scale, apply_pca, ncomp_pca, \

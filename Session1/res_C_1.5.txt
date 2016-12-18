@@ -1,0 +1,2 @@
+kernel = rbf, C = 1.5, sigma = 0.01, ncomp_pca = 10
+accuracy = 32.2180916976    running_time = 270.506652832

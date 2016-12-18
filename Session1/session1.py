@@ -44,12 +44,14 @@ def train_classifier(X, L, SVM_options):
     if(SVM_options.kernel == 'linear'):
         clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1).fit(X, L)
     elif(SVM_options.kernel == 'poly'):
-        clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, coef0 = SVM_options.coef0).fit(X,L)
+        clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, \
+                coef0 = SVM_options.coef0, random_state = 1).fit(X,L)
     elif(SVM_options.kernel == 'rbf'):
         clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma, \
                 random_state = 1).fit(X, L)
     elif(SVM_options.kernel == 'sigmoid'):
-        clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0).fit(X, L)
+        clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0, \
+                random_state = 1).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
@@ -73,7 +75,7 @@ def read_and_extract_features(train_images_filenames, train_labels, detector):
     return Train_descriptors, Train_label_per_descriptor
 
 
-def train_and_test(scale, apply_pca, ncomp_pca, nfeatures, descriptor, SVM_options):
+def train_and_test(scale, apply_pca, ncomp_pca, detector_options, SVM_options):
 # Main program, where data is read, features computed, the classifier fit,
 # and then applied to the test data.
     start = time.time()
@@ -87,13 +89,16 @@ def train_and_test(scale, apply_pca, ncomp_pca, nfeatures, descriptor, SVM_optio
     print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
     print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
 
-    # create the SIFT detector object
-    if(descriptor=='SIFT'):
-        detector = cv2.SIFT(nfeatures)
-    elif (descriptor=='SURF'):   
-        detector = cv2.SURF(nfeatures)
+    # create the detector object
+    if(detector_options.descriptor == 'SIFT'):
+        detector = cv2.SIFT(detector_options.nfeatures)
+    elif (detector_options.descriptor == 'SURF'):   
+        detector = cv2.SURF(detector_options.SURF_hessian_ths)
+    elif (detector_options.descriptor == 'ORB'):   
+        detector = cv2.ORB(detector_options.nfeatures)
     else: 
-        detector = cv2.ORB(nfeatures)
+        print 'Error: feature detector not recognized.'
+        
     # read the just 30 train images per class
     # extract SIFT keypoints and descriptors
     # store descriptors in a python list of numpy arrays
@@ -143,4 +148,11 @@ class SVM_options_class:
     sigma = 1
     degree = 3
     coef0 = 0
+    
+
+class detector_options_class:
+# Options feature detectors.
+    descriptor = 'SIFT'
+    nfeatures = 100
+    SURF_hessian_ths = 400
 
