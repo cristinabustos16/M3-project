@@ -1,0 +1,2 @@
+descriptor = ORB, kernel = rbf, C = 1, sigma = 0.01, ncomp_pca = 100
+accuracy = 19.9504337051    running_time = 367.9734478

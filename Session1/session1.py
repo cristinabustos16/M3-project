@@ -9,7 +9,7 @@ import sys
 
 
 def test_system(test_images_filenames, test_labels, clf, detector, stdSlr, pca, \
-                apply_pca, scale):
+                apply_pca, scale, SVM_probability):
 # Use the test data to measure the performance of the adjusted classifier.
     numtestimages=0
     numcorrect=0
@@ -25,9 +25,14 @@ def test_system(test_images_filenames, test_labels, clf, detector, stdSlr, pca, 
         if(apply_pca == 1):
             des = pca.transform(des)
         # Classify:
-        predictions = clf.predict(des)
-        values, counts = np.unique(predictions, return_counts=True)
-        predictedclass = values[np.argmax(counts)]
+        if(SVM_probability == 0):
+            predictions = clf.predict(des)
+            values, counts = np.unique(predictions, return_counts=True)
+            predictedclass = values[np.argmax(counts)]
+        else:
+            predictions = clf.predict_proba(des)
+            sumpredictions = predictions.sum(axis=0)
+            predictedclass = clf.classes_[sumpredictions.argmax()]
         print 'image '+filename+' was from class '+test_labels[i]+' and was predicted '+predictedclass
         numtestimages+=1
         if predictedclass==test_labels[i]:
@@ -42,16 +47,18 @@ def train_classifier(X, L, SVM_options):
     print 'Training the SVM classifier...'
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
-        clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1).fit(X, L)
+        clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1, \
+                probability = SVM_options.probability).fit(X, L)
     elif(SVM_options.kernel == 'poly'):
         clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, \
-                coef0 = SVM_options.coef0, random_state = 1).fit(X,L)
+                coef0 = SVM_options.coef0, random_state = 1, \
+                probability = SVM_options.probability).fit(X,L)
     elif(SVM_options.kernel == 'rbf'):
         clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma, \
-                random_state = 1).fit(X, L)
+                random_state = 1, probability = SVM_options.probability).fit(X, L)
     elif(SVM_options.kernel == 'sigmoid'):
         clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0, \
-                random_state = 1).fit(X, L)
+                random_state = 1, probability = SVM_options.probability).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
@@ -131,7 +138,7 @@ def train_and_test(scale, apply_pca, ncomp_pca, detector_options, SVM_options):
 
     # get all the test data and predict their labels
     accuracy = test_system(test_images_filenames, test_labels, clf, detector, \
-        stdSlr, pca, apply_pca, scale)
+        stdSlr, pca, apply_pca, scale, SVM_options.probability)
     
     end=time.time()
     running_time = end-start
@@ -148,6 +155,7 @@ class SVM_options_class:
     sigma = 1
     degree = 3
     coef0 = 0
+    probability = 0 # This changes the way we aggregate predictions.
     
 
 class detector_options_class:

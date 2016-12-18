@@ -8,9 +8,10 @@ from session1 import train_and_test
 SVM_options = SVM_options_class()
 SVM_options.kernel = 'rbf'
 SVM_options.sigma = 0.01
+SVM_options.probability = 0
 detector_options = detector_options_class()
 detector_options.descriptor = 'SIFT'
-ncomp_pca = 1
+ncomp_pca = 10
 scale = 1
 apply_pca = 1
 

@@ -37,9 +37,10 @@ def alternative_npunique(predictions):
     values = ('forest', 'Opencountry', 'inside_city', 'coast', \
                 'highway', 'mountain', 'street', 'tallbuilding')
     return values, counts
+    
 
 
-def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr, pca, \
+def test_system(test_images_filenames, test_labels, clf, detector, stdSlr, pca, \
                 apply_pca, scale):
 # Use the test data to measure the performance of the adjusted classifier.
     numtestimages=0
@@ -48,7 +49,7 @@ def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr, p
         filename=test_images_filenames[i]
         ima=cv2.imread(filename)
         gray=cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        kpt,des=SIFTdetector.detectAndCompute(gray,None)
+        kpt,des=detector.detectAndCompute(gray,None)
         # Scale descriptors:
         if(scale == 1):
             des = stdSlr.transform(des)
@@ -56,10 +57,15 @@ def test_system(test_images_filenames, test_labels, clf, SIFTdetector, stdSlr, p
         if(apply_pca == 1):
             des = pca.transform(des)
         # Classify:
-        predictions = clf.predict(des)
-        #values, counts = np.unique(predictions, return_counts=True)
-        values, counts = alternative_npunique(predictions)
-        predictedclass = values[np.argmax(counts)]
+        if(SVM_probability == 0):
+            predictions = clf.predict(des)
+            #values, counts = np.unique(predictions, return_counts=True)
+            values, counts = alternative_npunique(predictions)
+            predictedclass = values[np.argmax(counts)]
+        else:
+            predictions = clf.predict_proba(des)
+            sumpredictions = predictions.sum(axis=0)
+            predictedclass = clf.classes_[sumpredictions.argmax()]
         print 'image '+filename+' was from class '+test_labels[i]+' and was predicted '+predictedclass
         numtestimages+=1
         if predictedclass==test_labels[i]:
@@ -75,8 +81,14 @@ def train_classifier(X, L, SVM_options):
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
         clf = svm.SVC(kernel='linear', C = SVM_options.C, random_state = 1).fit(X, L)
+    elif(SVM_options.kernel == 'poly'):
+        clf = svm.SVC(kernel='poly', C = SVM_options.C, degree = SVM_options.degree, \
+                coef0 = SVM_options.coef0, random_state = 1).fit(X,L)
     elif(SVM_options.kernel == 'rbf'):
         clf = svm.SVC(kernel='rbf', C = SVM_options.C, gamma = SVM_options.sigma, \
+                random_state = 1).fit(X, L)
+    elif(SVM_options.kernel == 'sigmoid'):
+        clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0, \
                 random_state = 1).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
@@ -84,7 +96,7 @@ def train_classifier(X, L, SVM_options):
     return clf
 
 
-def read_and_extract_features(train_images_filenames, train_labels, SIFTdetector):
+def read_and_extract_features(train_images_filenames, train_labels, detector):
 # Read the images and extract the features.
     Train_descriptors = []
     Train_label_per_descriptor = []
@@ -94,14 +106,14 @@ def read_and_extract_features(train_images_filenames, train_labels, SIFTdetector
             print 'Reading image '+filename
             ima=cv2.imread(filename)
             gray=cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-            kpt,des=SIFTdetector.detectAndCompute(gray,None)
+            kpt,des=detector.detectAndCompute(gray,None)
             Train_descriptors.append(des)
             Train_label_per_descriptor.append(train_labels[i])
             print str(len(kpt))+' extracted keypoints and descriptors'
     return Train_descriptors, Train_label_per_descriptor
 
 
-def train_and_test(scale, apply_pca, ncomp_pca, SIFT_nfeatures, SVM_options):
+def train_and_test(scale, apply_pca, ncomp_pca, detector_options, SVM_options):
 # Main program, where data is read, features computed, the classifier fit,
 # and then applied to the test data.
     start = time.time()
@@ -115,14 +127,21 @@ def train_and_test(scale, apply_pca, ncomp_pca, SIFT_nfeatures, SVM_options):
     print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
     print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
 
-    # create the SIFT detector object
-    SIFTdetector = cv2.SIFT(SIFT_nfeatures)
-
+    # create the detector object
+    if(detector_options.descriptor == 'SIFT'):
+        detector = cv2.SIFT(detector_options.nfeatures)
+    elif (detector_options.descriptor == 'SURF'):   
+        detector = cv2.SURF(detector_options.SURF_hessian_ths)
+    elif (detector_options.descriptor == 'ORB'):   
+        detector = cv2.ORB(detector_options.nfeatures)
+    else: 
+        print 'Error: feature detector not recognized.'
+        
     # read the just 30 train images per class
     # extract SIFT keypoints and descriptors
     # store descriptors in a python list of numpy arrays
     Train_descriptors, Train_label_per_descriptor = \
-        read_and_extract_features(train_images_filenames, train_labels, SIFTdetector)
+        read_and_extract_features(train_images_filenames, train_labels, detector)
 
     # Transform everything to numpy arrays
     D=Train_descriptors[0]
@@ -136,8 +155,8 @@ def train_and_test(scale, apply_pca, ncomp_pca, SIFT_nfeatures, SVM_options):
     if(scale == 1):
         D = stdSlr.transform(D)
 
-    pca = PCA(n_components = ncomp_pca)
     # PCA:
+    pca = PCA(n_components = ncomp_pca)
     if(apply_pca == 1):
         print "Applying principal components analysis..."
         pca.fit(D)
@@ -149,8 +168,8 @@ def train_and_test(scale, apply_pca, ncomp_pca, SIFT_nfeatures, SVM_options):
     clf = train_classifier(D, L, SVM_options)
 
     # get all the test data and predict their labels
-    accuracy = test_system(test_images_filenames, test_labels, clf, SIFTdetector, \
-        stdSlr, pca, apply_pca, scale)
+    accuracy = test_system(test_images_filenames, test_labels, clf, detector, \
+        stdSlr, pca, apply_pca, scale, SVM_options.probability)
     
     end=time.time()
     running_time = end-start
@@ -162,9 +181,19 @@ def train_and_test(scale, apply_pca, ncomp_pca, SIFT_nfeatures, SVM_options):
 
 class SVM_options_class:
 # Options for SVM classifier.
-    kernel = 'linear'
+    kernel = 'poly'
     C = 1
     sigma = 1
+    degree = 3
+    coef0 = 0
+    probability = 0 # This changes the way we aggregate predictions.
+    
+
+class detector_options_class:
+# Options feature detectors.
+    descriptor = 'SIFT'
+    nfeatures = 100
+    SURF_hessian_ths = 400
     
     
 #############################################################################
@@ -176,7 +205,10 @@ SVM_options = SVM_options_class()
 SVM_options.kernel = 'rbf'
 SVM_options.C = 1
 SVM_options.sigma = 0.01
-SIFT_nfeatures = 100
+SVM_options.probability = 0
+detector_options = detector_options_class()
+detector_options.descriptor = 'ORB'
+detector_options.nfeatures = 100
 scale = 1
 apply_pca = 1
     
@@ -188,11 +220,12 @@ ncomp_pca = int(sys.argv[2])
 
 # Call main program:
 accuracy, running_time = train_and_test(scale, apply_pca, ncomp_pca, \
-    SIFT_nfeatures, SVM_options)
+    detector_options, SVM_options)
 
 # Write results:
 fid = open(filename, 'w')
-line1 = 'kernel = ' + SVM_options.kernel + ', C = ' + str(SVM_options.C) + \
+line1 = 'descriptor = ' + detector_options.descriptor + \
+    ', kernel = ' + SVM_options.kernel + ', C = ' + str(SVM_options.C) + \
     ', sigma = ' + str(SVM_options.sigma) + ', ncomp_pca = ' + str(ncomp_pca) + '\n'
 line2 = 'accuracy = ' + str(accuracy) + '    running_time = ' + str(running_time)
 fid.write(line1)
