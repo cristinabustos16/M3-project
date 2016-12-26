@@ -5,10 +5,13 @@ from session2 import general_options_class
 
 # Select options:
 options = general_options_class()
-options.scale_kmeans = 1
-options.apply_pca = 1
+options.scale_kmeans = 0
+options.apply_pca = 0
+
+
+# Name of the file with the codebook (without ending):
+filename = 'codebook512'
 
 
 # Call main program:
-accuracy, running_time = main(options.scale_kmeans, options.apply_pca, options.ncomp_pca, \
-                            options.detector_options, options.SVM_options)
+accuracy, running_time = main(options, filename)
