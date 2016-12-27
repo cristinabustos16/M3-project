@@ -10,7 +10,49 @@ import sys
 
 
 ##############################################################################
-def main(options, filename):
+def train_and_evaluate(options):
+
+    # Create the detector object
+    detector = create_detector(options.detector_options)
+    
+    accuracy = np.zeros(options.k_cv)
+    
+    # Read the subsets:
+    subsets_filenames = list(xrange(options.k_cv))
+    subsets_labels = list(xrange(options.k_cv))
+    for i in range(options.k_cv):
+        subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','r'))
+        subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','r'))
+        
+    for i in range(options.k_cv):
+        trainset_filenames = []
+        trainset_labels = []
+        for j in range(options.k_cv):
+            if(i != j):
+                trainset_filenames.extend(subsets_filenames[j])
+                trainset_labels.extend(subsets_labels[j])
+        validation_filenames = subsets_filenames[i]
+        validation_labels = subsets_labels[i]
+    
+        # Train system:
+        clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
+                                    train_system(trainset_filenames, \
+                                    trainset_labels, detector, options)
+    
+        # Evaluate system:
+        accuracy[i] = test_system(validation_filenames, validation_labels, \
+                                detector, codebook, clf, stdSlr_VW, \
+                                stdSlr_kmeans, pca, options)
+           
+    # Compute the mean and the standard deviation of the accuracies found:
+    accuracy_mean = np.mean(accuracy)
+    accuracy_sd = np.std(accuracy, ddof = 1)
+                     
+    return accuracy_mean, accuracy_sd
+
+
+##############################################################################
+def main(options, fname_codebook, fname_descriptors):
     start = time.time()
 
     # read the train and test files
@@ -24,22 +66,16 @@ def main(options, filename):
     print 'Loaded ' + str(len(test_images_filenames)) + \
             ' testing images filenames with classes ',set(test_labels)
 
-    # create the detector object
+    # Create the detector object
     detector = create_detector(options.detector_options)
     
-    # Read codebook:
-    codebook = read_codebook('codebook')
-#    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
-#    stdSlr_kmeans, pca = preprocess_fit(D, options)
-#    D = preprocess_apply(D, stdSlr_kmeans, pca, options)
-#    codebook = compute_codebook(options.k, D)
-    
     # Train system:
-    clf, stdSlr_VW, stdSlr_kmeans, pca = train_system(train_images_filenames, \
-                                    detector, codebook, train_labels, options)
+    clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
+                                    train_system(train_images_filenames, \
+                                    train_labels, detector, options)
     
     # Test system:
-    accuracy = test_system(test_images_filenames, detector, codebook, test_labels, \
+    accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
                             clf, stdSlr_VW, stdSlr_kmeans, pca, options)
 
     print 'Final accuracy: ' + str(accuracy)
@@ -47,10 +83,47 @@ def main(options, filename):
     print 'Done in '+str(end-start)+' secs.' 
     
     return accuracy, end
+
+
+##############################################################################
+def create_subsets_cross_validation(k_cv):
+    # Create a split for k-fold Cross-Validation.
+    # Read the whole training set:
+    train_images_filenames = \
+                np.array(cPickle.load(open('train_images_filenames.dat','r')))
+    train_labels = np.array(cPickle.load(open('train_labels.dat','r')))
     
+    nimages = len(train_labels)
+    nimages_persubset = np.divide(nimages, k_cv)
+    
+    # Sample random numbers in the range of 0 to the number of images, without
+    # replacement. This is like shuffeling the indexes.
+    shuffled_images = np.random.choice(range(nimages), nimages, replace = False)
+    
+    ini = 0
+    for i in range(k_cv):
+        if i == k_cv-1:
+            fin = nimages
+        else:
+            fin = ini + nimages_persubset
+        # Indexes for subset i:
+        subset = shuffled_images[ini:fin]
+        # From indexes to filenames and labels:
+        subset_filenames = list(train_images_filenames[subset])
+        subset_labels = list(train_labels[subset])
+#        subset_filenames = train_images_filenames[subset]
+#        subset_labels = train_labels[subset]
+        # Write the subsets:
+        cPickle.dump(subset_filenames, open('subset_'+str(i)+'_filenames.dat', "wb"))
+        cPickle.dump(subset_labels, open('subset_'+str(i)+'_labels.dat', "wb"))
+#        np.savetxt('subset_'+str(i)+'_filenames.txt', subset_filenames, fmt='%s')
+#        np.savetxt('subset_'+str(i)+'_labels.txt', subset_labels, fmt='%s')
+        # Update beginning of indexes:
+        ini = fin
+        
     
 ##############################################################################
-def compute_and_write_codebook(options, filename):
+def compute_and_write_codebook(options, fname_codebook):
     
     # read the train and test files
     train_images_filenames = cPickle.load(open('train_images_filenames.dat','r'))
@@ -59,7 +132,7 @@ def compute_and_write_codebook(options, filename):
     print 'Loaded ' + str(len(train_images_filenames)) + \
             ' training images filenames with classes ',set(train_labels)
 
-    # create the detector object
+    # Create the detector object
     detector = create_detector(options.detector_options)
     
     # Extract features from train images:
@@ -72,10 +145,25 @@ def compute_and_write_codebook(options, filename):
     D = preprocess_apply(D, stdSlr_kmeans, pca, options)
     
     # Compute the codebook with the features:
-    codebook = compute_codebook(options.k, D)
+    codebook = compute_codebook(options.kmeans, D)
     
     # Write codebook:
-    cPickle.dump(codebook, open(filename+'.dat', "wb"))
+    cPickle.dump(codebook, open(fname_codebook+'.dat', "wb"))
+    
+    
+##############################################################################
+def compute_and_write_descriptors(fname_descriptors, options):
+    # Save the descriptors computed over the images, stored in a matrix D,
+    # as well as the number of descriptors that each image has.
+
+    train_images_filenames = cPickle.load(open('train_images_filenames.dat','r'))
+    # Create the detector object
+    detector = create_detector(options.detector_options)
+    # Extract features from train images:
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+    # Write arrays:
+    np.savetxt(fname_descriptors + '_D.txt', D, fmt = '%u')
+    np.savetxt(fname_descriptors + '_dpi.txt', descriptors_per_image, fmt = '%u')
     
     
 ##############################################################################
@@ -111,7 +199,7 @@ def read_and_extract_features(images_filenames, detector):
     
     # Transform everything to numpy arrays
     size_descriptors = descriptors[0].shape[1]
-    D = np.zeros((np.sum([len(p) for p in descriptors]), size_descriptors), dtype=np.float64)
+    D = np.zeros((np.sum([len(p) for p in descriptors]), size_descriptors), dtype=np.float32)
     startingpoint = 0
     for i in range(len(descriptors)):
         D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
@@ -146,14 +234,14 @@ def preprocess_apply(D, stdSlr_kmeans, pca, options):
     
     
 ##############################################################################
-def compute_codebook(k, D):
+def compute_codebook(kmeans, D):
     # Clustering (unsupervised classification)
     # Apply kmeans over the features to computer the codebook.
-    print 'Computing kmeans with ' + str(k) + ' centroids'
+    print 'Computing kmeans with ' + str(kmeans) + ' centroids'
     sys.stdout.flush()
     init = time.time()
-    codebook = cluster.MiniBatchKMeans(n_clusters=k, verbose=False, \
-            batch_size = k * 20, compute_labels=False, \
+    codebook = cluster.MiniBatchKMeans(n_clusters=kmeans, verbose=False, \
+            batch_size = kmeans * 20, compute_labels=False, \
             reassignment_ratio=10**-4, random_state = 1)
     codebook.fit(D)
     end = time.time()
@@ -162,23 +250,30 @@ def compute_codebook(k, D):
     
     
 ##############################################################################
-def read_codebook(filename):
+def read_codebook(fname_codebook):
     # Read the codebook from the specified file.
-    with open(filename+'.dat', "rb") as input_file:
+    with open(fname_codebook+'.dat', "rb") as input_file:
         codebook = cPickle.load(input_file)
     return codebook
     
     
 ##############################################################################
-def descriptors2words(D, codebook, k, descriptors_per_image):
+def read_descriptors(fname_descriptors):
+    D = np.loadtxt(fname_descriptors + '_D.txt', dtype = np.float32)
+    descriptors_per_image = np.loadtxt(fname_descriptors + '_dpi.txt', dtype = np.uint8)
+    return D, descriptors_per_image
+    
+    
+##############################################################################
+def descriptors2words(D, codebook, kmeans, descriptors_per_image):
     # Compute the visual words, given the features and a codebook.
     nimages = len(descriptors_per_image)
-    visual_words = np.zeros((nimages,k), dtype=np.float32)
+    visual_words = np.zeros((nimages,kmeans), dtype=np.float32)
     ini = 0
     for i in xrange(nimages):
         fin = ini + descriptors_per_image[i]
         words = codebook.predict(D[ini:fin,:])
-        visual_words[i,:] = np.bincount(words, minlength=k)
+        visual_words[i,:] = np.bincount(words, minlength=kmeans)
         ini = fin
     return visual_words
 
@@ -208,11 +303,24 @@ def train_classifier(X, L, SVM_options):
     
     
 ##############################################################################
-def train_system(train_images_filenames, detector, codebook, train_labels, options):
+def train_system(train_images_filenames, train_labels, detector, options):
     # Train the system with the training data.
-                        
-    # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+    
+    # Getting the image descriptors:
+    if options.compute_descriptors:                
+        # Extract features from train images:
+        D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+    else:
+        # Read descriptors:
+        D, descriptors_per_image = read_descriptors(options.fname_descriptors)
+        
+    # Getting the codebook:
+    if options.compute_codebook:
+        # Compute the codebook:
+        codebook = compute_codebook(options.kmeans, D)
+    else:
+        # Read codebook:
+        codebook = read_codebook(options.fname_codebook)
     
     # Fit the scaler and the PCA:
     stdSlr_kmeans, pca = preprocess_fit(D, options)
@@ -221,7 +329,7 @@ def train_system(train_images_filenames, detector, codebook, train_labels, optio
     D = preprocess_apply(D, stdSlr_kmeans, pca, options)
 
     # Cast features to Bag of Visual Words:
-    visual_words = descriptors2words(D, codebook, options.k, descriptors_per_image)
+    visual_words = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
     
     # Fit scaler for words:
     stdSlr_VW = StandardScaler().fit(visual_words)
@@ -232,11 +340,11 @@ def train_system(train_images_filenames, detector, codebook, train_labels, optio
     # Train the classifier:
     clf = train_classifier(visual_words, train_labels, options.SVM_options)
     
-    return clf, stdSlr_VW, stdSlr_kmeans, pca
+    return clf, codebook, stdSlr_VW, stdSlr_kmeans, pca
     
     
 ##############################################################################
-def test_system(test_images_filenames, detector, codebook, test_labels, clf, \
+def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
                     stdSlr_VW, stdSlr_kmeans, pca, options):
     # get all the test data and predict their labels
                         
@@ -247,7 +355,7 @@ def test_system(test_images_filenames, detector, codebook, test_labels, clf, \
     D = preprocess_apply(D, stdSlr_kmeans, pca, options)
 
     # Cast features to visual words:
-    visual_words_test = descriptors2words(D, codebook, options.k, descriptors_per_image)
+    visual_words_test = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
     
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
@@ -285,4 +393,9 @@ class general_options_class:
     ncomp_pca = 30 # Number of components for PCA.
     scale_kmeans = 0 # Scale features befores applying kmeans.
     apply_pca = 0 # Apply, or not, PCA.
-    k = 512 # Number of cluster for kmeans (codebook)
+    kmeans = 512 # Number of cluster for k-means (codebook).
+    k_cv = 5 # Number of subsets for k-fold cross-validation.
+    compute_codebook = 1 # Compute or read the codebook.
+    fname_codebook = 'codebook512' # In case of reading the codebook, specify here name of the file.
+    compute_descriptors = 1 # Compute or read the image descriptors.
+    fname_descriptors = 'descriptors_SIFT_100' # In case of reading the descriptors, specify here name of the file.
