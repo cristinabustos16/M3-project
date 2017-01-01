@@ -52,7 +52,7 @@ def train_and_evaluate(options):
 
 
 ##############################################################################
-def main(options, fname_codebook, fname_descriptors):
+def main(options):
     start = time.time()
 
     # read the train and test files
