@@ -180,13 +180,19 @@ def create_detector(detector_options):
     return detector
 
 
-def dense_sampling(max_nr_keypoints, image_height, image_width):
-    step_size = float(image_height*image_width)/max_nr_keypoints
-    step_size = int(np.ceil(step_size))
+def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_width):
+
+    nr_keypoints = (image_height/step_size)*(image_width/step_size)
+    while not nr_keypoints <= max_nr_keypoints:
+        step_size = step_size - 1
+        nr_keypoints = (image_height / step_size) * (image_width / step_size)
+
     if step_size < 1:
         step_size = 1
-    kpt = [cv2.KeyPoint(x, y, step_size) for y in range(0, image_height, step_size)
+
+    kpt = [cv2.KeyPoint(x, y, radius) for y in range(0, image_height, step_size)
            for x in range(0, image_width, step_size)]
+
     return kpt
 
 
@@ -203,11 +209,14 @@ def read_and_extract_features(images_filenames, detector, detector_options):
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
         if (detector_options.dense_sampling == 1):
-            kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, gray.shape[0], gray.shape[1])
+            kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
+                                 detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
             des = detector.compute(gray, kpt)
+            #descriptors_per_image[i] = kpt.__len__()
         else:
             kpt,des = detector.detectAndCompute(gray,None)
-        descriptors_per_image[i] = len(kpt)
+        descriptors_per_image[i] = kpt.__len__()
+        #descriptors_per_image[i] = len(kpt)
         descriptors.append(des)
         print str(descriptors_per_image[i]) + ' extracted keypoints and descriptors'
     
@@ -399,6 +408,8 @@ class detector_options_class:
     SURF_hessian_ths = 400
     dense_sampling = 0  # Apply dense sampling to the selected detector
     dense_sampling_max_nr_keypoints = 50000  # Maximum number of equally spaced keypoints
+    dense_sampling_keypoint_step_size = 5
+    dense_sampling_keypoint_radius = 10  # Maximum number of equally spaced keypoints
     
 
 ##############################################################################
