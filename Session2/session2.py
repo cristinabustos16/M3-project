@@ -391,11 +391,11 @@ class general_options_class:
     SVM_options = SVM_options_class()
     detector_options = detector_options_class()
     ncomp_pca = 30 # Number of components for PCA.
-    scale_kmeans = 0 # Scale features befores applying kmeans.
+    scale_kmeans = 0 # Scale features before applying k-means.
     apply_pca = 0 # Apply, or not, PCA.
-    kmeans = 512 # Number of cluster for k-means (codebook).
+    kmeans = 512 # Number of clusters for k-means (codebook).
     k_cv = 5 # Number of subsets for k-fold cross-validation.
     compute_codebook = 1 # Compute or read the codebook.
-    fname_codebook = 'codebook512' # In case of reading the codebook, specify here name of the file.
+    fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     compute_descriptors = 1 # Compute or read the image descriptors.
-    fname_descriptors = 'descriptors_SIFT_100' # In case of reading the descriptors, specify here name of the file.
+    fname_descriptors = 'descriptors_SIFT_100' # In case of reading the descriptors, specify here the name of the file.
