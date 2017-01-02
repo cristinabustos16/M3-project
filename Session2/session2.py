@@ -160,7 +160,7 @@ def compute_and_write_descriptors(fname_descriptors, options):
     # Create the detector object
     detector = create_detector(options.detector_options)
     # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
     # Write arrays:
     np.savetxt(fname_descriptors + '_D.txt', D, fmt = '%u')
     np.savetxt(fname_descriptors + '_dpi.txt', descriptors_per_image, fmt = '%u')
@@ -180,8 +180,18 @@ def create_detector(detector_options):
     return detector
 
 
+def dense_sampling(max_nr_keypoints, image_height, image_width):
+    step_size = float(image_height*image_width)/max_nr_keypoints
+    step_size = int(np.ceil(step_size))
+    if step_size < 1:
+        step_size = 1
+    kpt = [cv2.KeyPoint(x, y, step_size) for y in range(0, image_height, step_size)
+           for x in range(0, image_width, step_size)]
+    return kpt
+
+
 ##############################################################################
-def read_and_extract_features(images_filenames, detector):
+def read_and_extract_features(images_filenames, detector, detector_options):
     # extract keypoints and descriptors
     # store descriptors in a python list of numpy arrays
     descriptors = []
@@ -192,7 +202,11 @@ def read_and_extract_features(images_filenames, detector):
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        kpt,des = detector.detectAndCompute(gray,None)
+        if (detector_options.dense_sampling == 1):
+            kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, gray.shape[0], gray.shape[1])
+            des = detector.compute(gray, kpt)
+        else:
+            kpt,des = detector.detectAndCompute(gray,None)
         descriptors_per_image[i] = len(kpt)
         descriptors.append(des)
         print str(descriptors_per_image[i]) + ' extracted keypoints and descriptors'
@@ -309,7 +323,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
     # Getting the image descriptors:
     if options.compute_descriptors:                
         # Extract features from train images:
-        D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+        D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
     else:
         # Read descriptors:
         D, descriptors_per_image = read_descriptors(options.fname_descriptors)
@@ -383,6 +397,8 @@ class detector_options_class:
     descriptor = 'SIFT'
     nfeatures = 100
     SURF_hessian_ths = 400
+    dense_sampling = 0  # Apply dense sampling to the selected detector
+    dense_sampling_max_nr_keypoints = 50000  # Maximum number of equally spaced keypoints
     
 
 ##############################################################################
