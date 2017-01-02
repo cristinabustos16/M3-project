@@ -252,7 +252,7 @@ def compute_codebook(kmeans, D):
 ##############################################################################
 def read_codebook(fname_codebook):
     # Read the codebook from the specified file.
-    with open(fname_codebook+'.dat', "rb") as input_file:
+    with open(fname_codebook+'.dat', "r") as input_file:
         codebook = cPickle.load(input_file)
     return codebook
     
@@ -328,8 +328,11 @@ def train_system(train_images_filenames, train_labels, detector, options):
     # Scale and apply PCA to features:
     D = preprocess_apply(D, stdSlr_kmeans, pca, options)
 
-    # Cast features to Bag of Visual Words:
-    visual_words = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
+    if options.spatial_pyramids:
+        visual_words = read_and_extract_visual_words(train_images_filenames, detector, codebook, options.kmeans)
+    else:
+        # Cast features to Bag of Visual Words:
+        visual_words = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
     
     # Fit scaler for words:
     stdSlr_VW = StandardScaler().fit(visual_words)
@@ -348,15 +351,18 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
                     stdSlr_VW, stdSlr_kmeans, pca, options):
     # get all the test data and predict their labels
                         
-    # Extract features form test images:
-    D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector)
+    if options.spatial_pyramids:
+        visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans)
+    else:
+        # Extract features form test images:
+        D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector)
+        
+        # Scale and apply PCA to the extracted features:
+        D = preprocess_apply(D, stdSlr_kmeans, pca, options)
     
-    # Scale and apply PCA to the extracted features:
-    D = preprocess_apply(D, stdSlr_kmeans, pca, options)
-
-    # Cast features to visual words:
-    visual_words_test = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
-    
+        # Cast features to visual words:
+        visual_words_test = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
+        
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
     
@@ -364,6 +370,100 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
 
     return accuracy
+    
+##############################################################################
+def read_and_extract_visual_words(images_filenames, detector, codebook, k):
+    # extract keypoints and descriptors
+    # store descriptors in a python list of numpy arrays
+    nimages = len(images_filenames)
+    visual_words = np.zeros((nimages,k*21), dtype=np.float32)
+    for i in range(nimages):
+        filename = images_filenames[i]
+        print 'Reading image ' + filename
+        ima = cv2.imread(filename)
+        gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
+        visual_words[i,:] = spatial_pyramids(gray, detector, codebook, k)
+
+    return visual_words
+    
+##############################################################################
+def spatial_pyramids(gray_l2, detector, codebook, k):
+    #Level 2
+    visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k)
+    
+    #Level 1
+    height_l2, width_l2 = gray_l2.shape
+    width_l1 = width_l2 / 2
+    height_l1 = height_l2 / 2
+    
+    gray_l1_1 = gray_l2[0:height_l1, 0:width_l1]
+    visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k)
+    gray_l1_2 = gray_l2[0:height_l1,width_l1 + 1:width_l2]
+    visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k)
+    gray_l1_3 = gray_l2[height_l1 + 1:height_l2,0:width_l1]
+    visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k)
+    gray_l1_4 = gray_l2[height_l1 + 1:height_l2,width_l1 + 1:width_l2]
+    visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k)
+    
+    visual_words_l1 = np.concatenate((visual_words_l1_1, visual_words_l1_2, visual_words_l1_3,visual_words_l1_4),axis=0)
+
+    #Level 0
+    width_l0 = width_l1 / 2
+    heigth_l0 = height_l1 / 2
+    
+    gray_l0_1_1 = gray_l1_1[0:heigth_l0, 0:width_l0]
+    visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k)
+    gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0 + 1:width_l1]
+    visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k)
+    gray_l0_1_3 = gray_l1_1[heigth_l0 + 1:height_l1,0:width_l0]
+    visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k)
+    gray_l0_1_4 = gray_l1_1[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k)
+    gray_l0_2_1 = gray_l1_2[0:heigth_l0, 0:width_l0]
+    visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k)
+    gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0 + 1:width_l1]
+    visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k)
+    gray_l0_2_3 = gray_l1_2[heigth_l0 + 1:height_l1,0:width_l0]
+    visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k)
+    gray_l0_2_4 = gray_l1_2[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k)
+    gray_l0_3_1 = gray_l1_3[0:heigth_l0, 0:width_l0]
+    visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k)
+    gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0 + 1:width_l1]
+    visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k)
+    gray_l0_3_3 = gray_l1_3[heigth_l0 + 1:height_l1,0:width_l0]
+    visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k)
+    gray_l0_3_4 = gray_l1_3[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k)
+    gray_l0_4_1 = gray_l1_4[0:heigth_l0, 0:width_l0]
+    visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k)
+    gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0 + 1:width_l1]
+    visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k)
+    gray_l0_4_3 = gray_l1_4[heigth_l0 + 1:height_l1,0:width_l0]
+    visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k)
+    gray_l0_4_4 = gray_l1_4[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k)
+    
+    visual_words_l0 = np.concatenate( (\
+        visual_words_l0_1_1, visual_words_l0_1_2, visual_words_l0_1_3,visual_words_l0_1_4, \
+        visual_words_l0_2_1, visual_words_l0_2_2, visual_words_l0_2_3,visual_words_l0_2_4, \
+        visual_words_l0_3_1, visual_words_l0_3_2, visual_words_l0_3_3,visual_words_l0_3_4, \
+        visual_words_l0_4_1, visual_words_l0_4_2, visual_words_l0_4_3,visual_words_l0_4_4),axis=0)
+    
+    visual_words = np.concatenate((1/4 * visual_words_l2, 1/4 * visual_words_l1, 1/2 * visual_words_l0),axis=0)
+            
+    return visual_words
+    
+##############################################################################
+def extract_visual_words(gray, detector, codebook, k):
+    kpt,des = detector.detectAndCompute(gray,None)
+    if not kpt:
+        words = []
+    else:
+        words=codebook.predict(des)
+    visual_words = np.bincount(words,minlength=k)
+    
+    return visual_words
     
 
 ##############################################################################
@@ -399,3 +499,4 @@ class general_options_class:
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here name of the file.
     compute_descriptors = 1 # Compute or read the image descriptors.
     fname_descriptors = 'descriptors_SIFT_100' # In case of reading the descriptors, specify here name of the file.
+    spatial_pyramids = 1 # Apply spatial pyramids in BoW framework or not
