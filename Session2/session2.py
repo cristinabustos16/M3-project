@@ -190,8 +190,11 @@ def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_widt
     if step_size < 1:
         step_size = 1
 
-    kpt = [cv2.KeyPoint(x, y, radius) for y in range(0, image_height, step_size)
-           for x in range(0, image_width, step_size)]
+    kpt = [cv2.KeyPoint(x, y, radius) for y in range(step_size-1, image_height-step_size, step_size)
+                                        for x in range(step_size-1, image_width-step_size, step_size)]
+
+    #kpt = [cv2.KeyPoint(x, y, radius) for y in range(0, image_height, step_size)
+     #      for x in range(0, image_width, step_size)]
 
     return kpt
 
@@ -202,21 +205,20 @@ def read_and_extract_features(images_filenames, detector, detector_options):
     # store descriptors in a python list of numpy arrays
     descriptors = []
     nimages = len(images_filenames)
-    descriptors_per_image = np.zeros(nimages, dtype=np.uint8)
+    descriptors_per_image = np.zeros(nimages, dtype=np.uint16)
     for i in range(nimages):
         filename = images_filenames[i]
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        if (detector_options.dense_sampling == 1):
+        if detector_options.dense_sampling == 1:
             kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
                                  detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
+            #kpt, des = detector.detectAndCompute(gray, None, useProvidedKeypoints=True)
             des = detector.compute(gray, kpt)
-            #descriptors_per_image[i] = kpt.__len__()
         else:
             kpt,des = detector.detectAndCompute(gray,None)
-        descriptors_per_image[i] = kpt.__len__()
-        #descriptors_per_image[i] = len(kpt)
+        descriptors_per_image[i] = len(kpt)
         descriptors.append(des)
         print str(descriptors_per_image[i]) + ' extracted keypoints and descriptors'
     
