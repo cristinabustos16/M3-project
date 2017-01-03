@@ -136,7 +136,8 @@ def compute_and_write_codebook(options, fname_codebook):
     detector = create_detector(options.detector_options)
     
     # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
+                                detector, options.detector_options)
     
     # Fit the scaler and the PCA:
     stdSlr_kmeans, pca = preprocess_fit(D, options)
@@ -160,7 +161,8 @@ def compute_and_write_descriptors(fname_descriptors, options):
     # Create the detector object
     detector = create_detector(options.detector_options)
     # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
+                                    detector, options.detector_options)
     # Write arrays:
     np.savetxt(fname_descriptors + '_D.txt', D, fmt = '%u')
     np.savetxt(fname_descriptors + '_dpi.txt', descriptors_per_image, fmt = '%u')
@@ -202,7 +204,7 @@ def read_and_extract_features(images_filenames, detector, detector_options):
     # store descriptors in a python list of numpy arrays
     descriptors = []
     nimages = len(images_filenames)
-    descriptors_per_image = np.zeros(nimages, dtype=np.uint8)
+    descriptors_per_image = np.zeros(nimages, dtype=np.uint)
     for i in range(nimages):
         filename = images_filenames[i]
         print 'Reading image ' + filename
@@ -211,10 +213,10 @@ def read_and_extract_features(images_filenames, detector, detector_options):
         if (detector_options.dense_sampling == 1):
             kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
                                  detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
-            des = detector.compute(gray, kpt)
+            kpt, des = detector.compute(gray, kpt)
             #descriptors_per_image[i] = kpt.__len__()
         else:
-            kpt,des = detector.detectAndCompute(gray,None)
+            kpt, des = detector.detectAndCompute(gray,None)
         descriptors_per_image[i] = kpt.__len__()
         #descriptors_per_image[i] = len(kpt)
         descriptors.append(des)
@@ -376,9 +378,11 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
                         
     if options.spatial_pyramids:
         visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans)
+    
     else:
         # Extract features form test images:
-        D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector)
+        D, descriptors_per_image = read_and_extract_features(test_images_filenames, \
+                            detector, options.detector_options)
         
         # Scale and apply PCA to the extracted features:
         D = preprocess_apply(D, stdSlr_kmeans, pca, options)
@@ -394,6 +398,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
 
     return accuracy
     
+    
 ##############################################################################
 def read_and_extract_visual_words(images_filenames, detector, codebook, k):
     # extract keypoints and descriptors
@@ -408,6 +413,7 @@ def read_and_extract_visual_words(images_filenames, detector, codebook, k):
         visual_words[i,:] = spatial_pyramids(gray, detector, codebook, k)
 
     return visual_words
+    
     
 ##############################################################################
 def spatial_pyramids(gray_l2, detector, codebook, k):
@@ -476,6 +482,7 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     visual_words = np.concatenate((1/4 * visual_words_l2, 1/4 * visual_words_l1, 1/2 * visual_words_l0),axis=0)
             
     return visual_words
+    
     
 ##############################################################################
 def extract_visual_words(gray, detector, codebook, k):
