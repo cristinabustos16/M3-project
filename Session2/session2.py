@@ -339,7 +339,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
             codebook = read_codebook(options.fname_codebook)
     
         visual_words = read_and_extract_visual_words(train_images_filenames, \
-                    detector, codebook, options.kmeans)
+                    detector, codebook, options)
                     
         stdSlr_kmeans = 0
         pca = 0
@@ -385,7 +385,8 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # get all the test data and predict their labels
                         
     if options.spatial_pyramids:
-        visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans)
+        visual_words_test = read_and_extract_visual_words(test_images_filenames, \
+                detector, codebook, options)
     
     else:
         # Extract features form test images:
@@ -408,43 +409,39 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     
     
 ##############################################################################
-def read_and_extract_visual_words(images_filenames, detector, codebook, k):
+def read_and_extract_visual_words(images_filenames, detector, codebook, options):
     # extract keypoints and descriptors
     # store descriptors in a python list of numpy arrays
     nimages = len(images_filenames)
 #    visual_words = np.zeros((nimages,k*21), dtype=np.float32)
-    visual_words = np.zeros((nimages,(k*21)), dtype=np.float32)
+    nhistsperlevel = [4**l for l in range(options.depth)]
+    nwords = sum(nhistsperlevel) * options.kmeans
+    visual_words = np.zeros((nimages, nwords), dtype=np.float32)
     for i in range(nimages):
         filename = images_filenames[i]
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        visual_words[i,:] = spatial_pyramid_new(gray, detector, codebook, k, 3)
+        visual_words[i,:] = spatial_pyramid_new(gray, detector, codebook, options)
 
     return visual_words
     
     
 ##############################################################################
-def spatial_pyramid_new(gray, detector, codebook, kmeans, depth):
+def spatial_pyramid_new(gray, detector, codebook, options):
     
     height, width = gray.shape
     
     visual_words = []
     
-    for level in range(depth):
+    for level in range(options.depth):
         deltai = height / (2**level)
         deltaj = width / (2**level)
         for i in range(2**level):
             for j in range(2**level):
                 im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
-                visual_words_im = extract_visual_words(im, detector, codebook, kmeans)
+                visual_words_im = extract_visual_words(im, detector, codebook, options.kmeans)
                 visual_words.extend(visual_words_im)
-    
-#    visual_words = extract_visual_words(gray, detector, codebook, kmeans)
-    
-#    kpt,des = detector.detectAndCompute(gray,None)
-#    words=codebook.predict(des)
-#    visual_words = np.bincount(words,minlength=kmeans)
                 
     return visual_words
     
@@ -566,3 +563,4 @@ class general_options_class:
     compute_codebook = 1 # Compute or read the codebook.
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
+    depth = 3 # Numbef of levels of the spatial pyramid.
