@@ -7,6 +7,9 @@ from sklearn import svm
 from sklearn import cluster
 from sklearn.decomposition import PCA
 import sys
+from sklearn.metrics import confusion_matrix
+import itertools
+import matplotlib.pyplot as plt
 
 
 ##############################################################################
@@ -96,7 +99,7 @@ def main(options):
     print 'Final accuracy: ' + str(accuracy)
     end = time.time()
     print 'Done in '+str(end-start)+' secs.' 
-    
+
     return accuracy, end
 
 
@@ -151,8 +154,7 @@ def compute_and_write_codebook(options, fname_codebook):
     detector = create_detector(options.detector_options)
     
     # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
-                                detector, options.detector_options)
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
     
     # Fit the scaler and the PCA:
     stdSlr_kmeans, pca = preprocess_fit(D, options)
@@ -372,7 +374,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
     D = preprocess_apply(D, stdSlr_kmeans, pca, options)
 
     if options.spatial_pyramids:
-        visual_words = read_and_extract_visual_words(train_images_filenames, detector, codebook, options.kmeans)
+        visual_words = read_and_extract_visual_words(train_images_filenames, detector, codebook, options.kmeans, options.detector_options)
     else:
         # Cast features to Bag of Visual Words:
         visual_words = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
@@ -395,12 +397,11 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # get all the test data and predict their labels
                         
     if options.spatial_pyramids:
-        visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans)
+        visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans, options.detector_options)
     
     else:
         # Extract features form test images:
-        D, descriptors_per_image = read_and_extract_features(test_images_filenames, \
-                            detector, options.detector_options)
+        D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector, options.detector_options)
         
         # Scale and apply PCA to the extracted features:
         D = preprocess_apply(D, stdSlr_kmeans, pca, options)
@@ -410,15 +411,23 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
+    predictions = clf.predict(visual_words_scaled)
     
     # Compute accuracy:
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
+    
+    cnf_matrix = confusion_matrix(test_labels, predictions)
+    plt.figure()
+    #class_names = ['coast','forest','highway','inside_city','mountain','Opencountry','street','tallbuilding']
+    class_names = set(test_labels)
+    plot_confusion_matrix(cnf_matrix, classes=class_names)
+    plt.show()
 
     return accuracy
     
     
 ##############################################################################
-def read_and_extract_visual_words(images_filenames, detector, codebook, k):
+def read_and_extract_visual_words(images_filenames, detector, codebook, k, detector_options):
     # extract keypoints and descriptors
     # store descriptors in a python list of numpy arrays
     nimages = len(images_filenames)
@@ -428,15 +437,15 @@ def read_and_extract_visual_words(images_filenames, detector, codebook, k):
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        visual_words[i,:] = spatial_pyramids(gray, detector, codebook, k)
+        visual_words[i,:] = spatial_pyramids(gray, detector, codebook, k, detector_options)
 
     return visual_words
     
     
 ##############################################################################
-def spatial_pyramids(gray_l2, detector, codebook, k):
+def spatial_pyramids(gray_l2, detector, codebook, k, detector_options):
     #Level 2
-    visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k)
+    visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k, detector_options)
     
     #Level 1
     height_l2, width_l2 = gray_l2.shape
@@ -444,13 +453,13 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     height_l1 = height_l2 / 2
     
     gray_l1_1 = gray_l2[0:height_l1, 0:width_l1]
-    visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k)
+    visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k, detector_options)
     gray_l1_2 = gray_l2[0:height_l1,width_l1:width_l2]
-    visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k)
+    visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k, detector_options)
     gray_l1_3 = gray_l2[height_l1:height_l2,0:width_l1]
-    visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k)
+    visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k, detector_options)
     gray_l1_4 = gray_l2[height_l1:height_l2,width_l1:width_l2]
-    visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k)
+    visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k, detector_options)
     
     visual_words_l1 = np.concatenate((visual_words_l1_1, visual_words_l1_2, visual_words_l1_3,visual_words_l1_4),axis=0)
 
@@ -459,37 +468,37 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     heigth_l0 = height_l1 / 2
     
     gray_l0_1_1 = gray_l1_1[0:heigth_l0, 0:width_l0]
-    visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k)
+    visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k, detector_options)
     gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k)
+    visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k, detector_options)
     gray_l0_1_3 = gray_l1_1[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k)
+    visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k, detector_options)
     gray_l0_1_4 = gray_l1_1[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k)
+    visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k, detector_options)
     gray_l0_2_1 = gray_l1_2[0:heigth_l0, 0:width_l0]
-    visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k)
+    visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k, detector_options)
     gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k)
+    visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k, detector_options)
     gray_l0_2_3 = gray_l1_2[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k)
+    visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k, detector_options)
     gray_l0_2_4 = gray_l1_2[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k)
+    visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k, detector_options)
     gray_l0_3_1 = gray_l1_3[0:heigth_l0, 0:width_l0]
-    visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k)
+    visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k, detector_options)
     gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k)
+    visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k, detector_options)
     gray_l0_3_3 = gray_l1_3[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k)
+    visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k, detector_options)
     gray_l0_3_4 = gray_l1_3[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k)
+    visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k, detector_options)
     gray_l0_4_1 = gray_l1_4[0:heigth_l0, 0:width_l0]
-    visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k)
+    visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k, detector_options)
     gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k)
+    visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k, detector_options)
     gray_l0_4_3 = gray_l1_4[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k)
+    visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k, detector_options)
     gray_l0_4_4 = gray_l1_4[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k)
+    visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k, detector_options)
     
     visual_words_l0 = np.concatenate( (\
         visual_words_l0_1_1, visual_words_l0_1_2, visual_words_l0_1_3,visual_words_l0_1_4, \
@@ -503,15 +512,48 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     
     
 ##############################################################################
-def extract_visual_words(gray, detector, codebook, k):
-    kpt,des = detector.detectAndCompute(gray,None)
+def extract_visual_words(gray, detector, codebook, k, detector_options):
+    if detector_options.dense_sampling == 1:
+        kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
+                  detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
+        kpt, des = detector.compute(gray, kpt)
+        #descriptors_per_image[i] = kpt.__len__()
+    else:
+        kpt, des = detector.detectAndCompute(gray,None)
+    
     if not kpt:
         words = []
     else:
         words=codebook.predict(des)
+        
     visual_words = np.bincount(words,minlength=k)
     
     return visual_words
+    
+#############################################################################
+def plot_confusion_matrix(cm, classes, cmap=plt.cm.Blues):
+    # This function prints and plots the confusion matrix.
+    # Normalization can be applied by setting `normalize=True`.
+    
+    
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    print(cm)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
     
 
 ##############################################################################
