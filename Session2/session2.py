@@ -170,22 +170,6 @@ def compute_and_write_codebook(options, fname_codebook):
     
     
 ##############################################################################
-def compute_and_write_descriptors(fname_descriptors, options):
-    # Save the descriptors computed over the images, stored in a matrix D,
-    # as well as the number of descriptors that each image has.
-
-    train_images_filenames = cPickle.load(open('train_images_filenames.dat','r'))
-    # Create the detector object
-    detector = create_detector(options.detector_options)
-    # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
-                                    detector, options.detector_options)
-    # Write arrays:
-    np.savetxt(fname_descriptors + '_D.txt', D, fmt = '%u')
-    np.savetxt(fname_descriptors + '_dpi.txt', descriptors_per_image, fmt = '%u')
-    
-    
-##############################################################################
 def create_detector(detector_options):
     # create the detector object
     if(detector_options.descriptor == 'SIFT'):
@@ -303,13 +287,6 @@ def read_codebook(fname_codebook):
     
     
 ##############################################################################
-def read_descriptors(fname_descriptors):
-    D = np.loadtxt(fname_descriptors + '_D.txt', dtype = np.float32)
-    descriptors_per_image = np.loadtxt(fname_descriptors + '_dpi.txt', dtype = np.uint8)
-    return D, descriptors_per_image
-    
-    
-##############################################################################
 def descriptors2words(D, codebook, kmeans, descriptors_per_image):
     # Compute the visual words, given the features and a codebook.
     nimages = len(descriptors_per_image)
@@ -350,35 +327,48 @@ def train_classifier(X, L, SVM_options):
 ##############################################################################
 def train_system(train_images_filenames, train_labels, detector, options):
     # Train the system with the training data.
-    
-    # Getting the image descriptors:
-    if options.compute_descriptors:                
-        # Extract features from train images:
-        D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
-    else:
-        # Read descriptors:
-        D, descriptors_per_image = read_descriptors(options.fname_descriptors)
-        
-    # Getting the codebook:
-    if options.compute_codebook:
-        # Compute the codebook:
-        codebook = compute_codebook(options.kmeans, D)
-    else:
-        # Read codebook:
-        codebook = read_codebook(options.fname_codebook)
-    
-    # Fit the scaler and the PCA:
-    stdSlr_kmeans, pca = preprocess_fit(D, options)
-    
-    # Scale and apply PCA to features:
-    D = preprocess_apply(D, stdSlr_kmeans, pca, options)
+
 
     if options.spatial_pyramids:
-        visual_words = read_and_extract_visual_words(train_images_filenames, detector, codebook, options.kmeans, options.detector_options)
+    
+        # Getting the codebook:
+        if options.compute_codebook:
+            # Compute the codebook:
+            print 'Error: not possible to compute codebook with spatial pyramids.'
+            sys.exit()
+        else:
+            # Read codebook:
+            codebook = read_codebook(options.fname_codebook)
+    
+        visual_words = read_and_extract_visual_words(train_images_filenames, \
+                    detector, codebook, options)
+                    
+        stdSlr_kmeans = 0
+        pca = 0
+        
+        
     else:
+        # Extract features from train images:
+        D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
+                    detector, options.detector_options)
+    
+        # Getting the codebook:
+        if options.compute_codebook:
+            # Compute the codebook:
+            codebook = compute_codebook(options.kmeans, D)
+        else:
+            # Read codebook:
+            codebook = read_codebook(options.fname_codebook)
+        
+        # Fit the scaler and the PCA:
+        stdSlr_kmeans, pca = preprocess_fit(D, options)
+        
+        # Scale and apply PCA to features:
+        D = preprocess_apply(D, stdSlr_kmeans, pca, options)
+
         # Cast features to Bag of Visual Words:
         visual_words = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
-    
+
     # Fit scaler for words:
     stdSlr_VW = StandardScaler().fit(visual_words)
     
@@ -397,7 +387,8 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # get all the test data and predict their labels
                         
     if options.spatial_pyramids:
-        visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans, options.detector_options)
+        visual_words_test = read_and_extract_visual_words(test_images_filenames, \
+                detector, codebook, options)
     
     else:
         # Extract features form test images:
@@ -427,23 +418,49 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     
     
 ##############################################################################
-def read_and_extract_visual_words(images_filenames, detector, codebook, k, detector_options):
+def read_and_extract_visual_words(images_filenames, detector, codebook, options):
     # extract keypoints and descriptors
     # store descriptors in a python list of numpy arrays
     nimages = len(images_filenames)
-    visual_words = np.zeros((nimages,k*21), dtype=np.float32)
+#    visual_words = np.zeros((nimages,k*21), dtype=np.float32)
+    nhistsperlevel = [4**l for l in range(options.depth)]
+    nwords = sum(nhistsperlevel) * options.kmeans
+    visual_words = np.zeros((nimages, nwords), dtype=np.float32)
     for i in range(nimages):
         filename = images_filenames[i]
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        visual_words[i,:] = spatial_pyramids(gray, detector, codebook, k, detector_options)
+        visual_words[i,:] = spatial_pyramid_new(gray, detector, codebook, options)
 
     return visual_words
     
     
 ##############################################################################
+<<<<<<< HEAD
 def spatial_pyramids(gray_l2, detector, codebook, k, detector_options):
+=======
+def spatial_pyramid_new(gray, detector, codebook, options):
+    
+    height, width = gray.shape
+    
+    visual_words = []
+    
+    for level in range(options.depth):
+        deltai = height / (2**level)
+        deltaj = width / (2**level)
+        for i in range(2**level):
+            for j in range(2**level):
+                im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
+                visual_words_im = extract_visual_words(im, detector, codebook, options.kmeans)
+                visual_words.extend(visual_words_im)
+                
+    return visual_words
+    
+    
+##############################################################################
+def spatial_pyramids(gray_l2, detector, codebook, k):
+>>>>>>> spatial_pyramid
     #Level 2
     visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k, detector_options)
     
@@ -591,6 +608,5 @@ class general_options_class:
     k_cv = 5 # Number of subsets for k-fold cross-validation.
     compute_codebook = 1 # Compute or read the codebook.
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
-    compute_descriptors = 1 # Compute or read the image descriptors.
-    fname_descriptors = 'descriptors_SIFT_100' # In case of reading the descriptors, specify here the name of the file.
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
+    depth = 3 # Numbef of levels of the spatial pyramid.

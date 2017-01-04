@@ -1,4 +1,4 @@
-M4 - Machine Learning for Computer Vision.
+﻿M4 - Machine Learning for Computer Vision.
 Project documentation for session 2.
 01/01/2017
 
@@ -16,8 +16,6 @@ List of main files:
 						the standard deviation of the accuracies will be returned.
 	- write_codebook.py: Must be redesigned. The idea is to compute the codebook, and then store store it, 
 						so we don't have to compute it again all the time.
-	- write_descriptors.py: Must be redesigned. Compute and write descriptors, so then it is just necessary
-						to load them.
 
 Structure of the code:
 	- We have created a class for the options of the system. This is the only input the system requires, so
