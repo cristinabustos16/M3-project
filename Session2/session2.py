@@ -10,7 +10,9 @@ import sys
 from sklearn.metrics import confusion_matrix
 import itertools
 import matplotlib.pyplot as plt
-
+from sklearn.metrics import roc_curve, auc
+from itertools import cycle
+from sklearn.preprocessing import label_binarize
 
 ##############################################################################
 def train_and_evaluate(options):
@@ -409,6 +411,14 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # Confusion matrix:
     if options.plot_confusion_matrix:
         plot_confusion_matrix(visual_words_scaled, clf, test_labels)
+        
+    # Compute ROC curve and ROC area for each class
+    classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', 'forest', 'tallbuilding', 'highway']
+    # Compute probabilities:
+    predicted_probabilities = clf.predict_proba(visual_words_scaled)
+    # Binarize the labels
+    binary_labels = label_binarize(test_labels, classes=classes)
+    compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options)
 
     return accuracy
     
@@ -580,6 +590,31 @@ def plot_confusion_matrix(visual_words_scaled, clf, test_labels):
     
 
 ##############################################################################
+def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options):
+    # Compute ROC curve and ROC area for each class
+    colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
+
+    for i, color in zip(range(classes.__len__()), colors):
+        fpr, tpr, thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
+        roc_auc = auc(fpr, tpr)
+        plt.plot(fpr, tpr, lw=2, color=color,
+             label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc))
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve')
+    plt.legend(loc="lower right", fontsize='x-small')
+    file_name = "roc_curve_desc_%s_dense_%s_kmeans_%s_pyramids_%s_kernel_%s_C_%s_sigma_%s.png" % (options.detector_options.descriptor, \
+                                                     options.detector_options.dense_sampling, options.kmeans, options.spatial_pyramids, \
+                                                              options.SVM_options.kernel, options.SVM_options.C, options.SVM_options.sigma)
+    plt.savefig(file_name, bbox_inches='tight')
+    #plt.show()
+
+
+##############################################################################
 class SVM_options_class:
 # Options for SVM classifier.
     kernel = 'linear'
@@ -587,7 +622,7 @@ class SVM_options_class:
     sigma = 1
     degree = 3
     coef0 = 0
-    probability = 0 # This changes the way we aggregate predictions.
+    probability = 1 # This changes the way we aggregate predictions.
     
 
 ##############################################################################
