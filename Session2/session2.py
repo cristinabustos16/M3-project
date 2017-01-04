@@ -407,6 +407,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # Compute accuracy:
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
     
+    # Confussion matrix:
     cnf_matrix = confusion_matrix(test_labels, predictions)
     plt.figure()
     #class_names = ['coast','forest','highway','inside_city','mountain','Opencountry','street','tallbuilding']
@@ -449,86 +450,89 @@ def spatial_pyramid_new(gray, detector, codebook, options):
         for i in range(2**level):
             for j in range(2**level):
                 im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
-                visual_words_im = extract_visual_words(im, detector, codebook, options.kmeans)
+                visual_words_im = extract_visual_words(im, detector, codebook, \
+                        options.kmeans, options.detector_options)
                 visual_words.extend(visual_words_im)
                 
     return visual_words
     
     
 ##############################################################################
-def spatial_pyramids(gray_l2, detector, codebook, k):
-    #Level 2
-    visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k, detector_options)
-    
-    #Level 1
-    height_l2, width_l2 = gray_l2.shape
-    width_l1 = width_l2 / 2
-    height_l1 = height_l2 / 2
-    
-    gray_l1_1 = gray_l2[0:height_l1, 0:width_l1]
-    visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k, detector_options)
-    gray_l1_2 = gray_l2[0:height_l1,width_l1:width_l2]
-    visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k, detector_options)
-    gray_l1_3 = gray_l2[height_l1:height_l2,0:width_l1]
-    visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k, detector_options)
-    gray_l1_4 = gray_l2[height_l1:height_l2,width_l1:width_l2]
-    visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k, detector_options)
-    
-    visual_words_l1 = np.concatenate((visual_words_l1_1, visual_words_l1_2, visual_words_l1_3,visual_words_l1_4),axis=0)
-
-    #Level 0
-    width_l0 = width_l1 / 2
-    heigth_l0 = height_l1 / 2
-    
-    gray_l0_1_1 = gray_l1_1[0:heigth_l0, 0:width_l0]
-    visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k, detector_options)
-    gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k, detector_options)
-    gray_l0_1_3 = gray_l1_1[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k, detector_options)
-    gray_l0_1_4 = gray_l1_1[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k, detector_options)
-    gray_l0_2_1 = gray_l1_2[0:heigth_l0, 0:width_l0]
-    visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k, detector_options)
-    gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k, detector_options)
-    gray_l0_2_3 = gray_l1_2[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k, detector_options)
-    gray_l0_2_4 = gray_l1_2[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k, detector_options)
-    gray_l0_3_1 = gray_l1_3[0:heigth_l0, 0:width_l0]
-    visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k, detector_options)
-    gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k, detector_options)
-    gray_l0_3_3 = gray_l1_3[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k, detector_options)
-    gray_l0_3_4 = gray_l1_3[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k, detector_options)
-    gray_l0_4_1 = gray_l1_4[0:heigth_l0, 0:width_l0]
-    visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k, detector_options)
-    gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0:width_l1]
-    visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k, detector_options)
-    gray_l0_4_3 = gray_l1_4[heigth_l0:height_l1,0:width_l0]
-    visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k, detector_options)
-    gray_l0_4_4 = gray_l1_4[heigth_l0:height_l1,width_l0:width_l1]
-    visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k, detector_options)
-    
-    visual_words_l0 = np.concatenate( (\
-        visual_words_l0_1_1, visual_words_l0_1_2, visual_words_l0_1_3,visual_words_l0_1_4, \
-        visual_words_l0_2_1, visual_words_l0_2_2, visual_words_l0_2_3,visual_words_l0_2_4, \
-        visual_words_l0_3_1, visual_words_l0_3_2, visual_words_l0_3_3,visual_words_l0_3_4, \
-        visual_words_l0_4_1, visual_words_l0_4_2, visual_words_l0_4_3,visual_words_l0_4_4),axis=0)
-    
-    visual_words = np.concatenate((1/4 * visual_words_l2, 1/4 * visual_words_l1, 1/2 * visual_words_l0),axis=0)
-            
-    return visual_words
+#def spatial_pyramids(gray_l2, detector, codebook, k):
+#    #Level 2
+#    visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k, detector_options)
+#    
+#    #Level 1
+#    height_l2, width_l2 = gray_l2.shape
+#    width_l1 = width_l2 / 2
+#    height_l1 = height_l2 / 2
+#    
+#    gray_l1_1 = gray_l2[0:height_l1, 0:width_l1]
+#    visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k, detector_options)
+#    gray_l1_2 = gray_l2[0:height_l1,width_l1:width_l2]
+#    visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k, detector_options)
+#    gray_l1_3 = gray_l2[height_l1:height_l2,0:width_l1]
+#    visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k, detector_options)
+#    gray_l1_4 = gray_l2[height_l1:height_l2,width_l1:width_l2]
+#    visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k, detector_options)
+#    
+#    visual_words_l1 = np.concatenate((visual_words_l1_1, visual_words_l1_2, visual_words_l1_3,visual_words_l1_4),axis=0)
+#
+#    #Level 0
+#    width_l0 = width_l1 / 2
+#    heigth_l0 = height_l1 / 2
+#    
+#    gray_l0_1_1 = gray_l1_1[0:heigth_l0, 0:width_l0]
+#    visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k, detector_options)
+#    gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0:width_l1]
+#    visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k, detector_options)
+#    gray_l0_1_3 = gray_l1_1[heigth_l0:height_l1,0:width_l0]
+#    visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k, detector_options)
+#    gray_l0_1_4 = gray_l1_1[heigth_l0:height_l1,width_l0:width_l1]
+#    visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k, detector_options)
+#    gray_l0_2_1 = gray_l1_2[0:heigth_l0, 0:width_l0]
+#    visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k, detector_options)
+#    gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0:width_l1]
+#    visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k, detector_options)
+#    gray_l0_2_3 = gray_l1_2[heigth_l0:height_l1,0:width_l0]
+#    visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k, detector_options)
+#    gray_l0_2_4 = gray_l1_2[heigth_l0:height_l1,width_l0:width_l1]
+#    visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k, detector_options)
+#    gray_l0_3_1 = gray_l1_3[0:heigth_l0, 0:width_l0]
+#    visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k, detector_options)
+#    gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0:width_l1]
+#    visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k, detector_options)
+#    gray_l0_3_3 = gray_l1_3[heigth_l0:height_l1,0:width_l0]
+#    visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k, detector_options)
+#    gray_l0_3_4 = gray_l1_3[heigth_l0:height_l1,width_l0:width_l1]
+#    visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k, detector_options)
+#    gray_l0_4_1 = gray_l1_4[0:heigth_l0, 0:width_l0]
+#    visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k, detector_options)
+#    gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0:width_l1]
+#    visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k, detector_options)
+#    gray_l0_4_3 = gray_l1_4[heigth_l0:height_l1,0:width_l0]
+#    visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k, detector_options)
+#    gray_l0_4_4 = gray_l1_4[heigth_l0:height_l1,width_l0:width_l1]
+#    visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k, detector_options)
+#    
+#    visual_words_l0 = np.concatenate( (\
+#        visual_words_l0_1_1, visual_words_l0_1_2, visual_words_l0_1_3,visual_words_l0_1_4, \
+#        visual_words_l0_2_1, visual_words_l0_2_2, visual_words_l0_2_3,visual_words_l0_2_4, \
+#        visual_words_l0_3_1, visual_words_l0_3_2, visual_words_l0_3_3,visual_words_l0_3_4, \
+#        visual_words_l0_4_1, visual_words_l0_4_2, visual_words_l0_4_3,visual_words_l0_4_4),axis=0)
+#    
+#    visual_words = np.concatenate((1/4 * visual_words_l2, 1/4 * visual_words_l1, 1/2 * visual_words_l0),axis=0)
+#            
+#    return visual_words
     
     
 ##############################################################################
-def extract_visual_words(gray, detector, codebook, k, detector_options):
+def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
     if detector_options.dense_sampling == 1:
-        kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
-                  detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
+        kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, \
+                    detector_options.dense_sampling_keypoint_step_size, \
+                    detector_options.dense_sampling_keypoint_radius, gray.shape[0], \
+                    gray.shape[1])
         kpt, des = detector.compute(gray, kpt)
         #descriptors_per_image[i] = kpt.__len__()
     else:
@@ -539,7 +543,7 @@ def extract_visual_words(gray, detector, codebook, k, detector_options):
     else:
         words=codebook.predict(des)
         
-    visual_words = np.bincount(words,minlength=k)
+    visual_words = np.bincount(words,minlength=kmeans)
     
     return visual_words
     
