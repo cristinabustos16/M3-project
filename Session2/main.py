@@ -6,10 +6,10 @@ from session2 import general_options_class
 # Select options:
 options = general_options_class()
 
-options.compute_codebook = 1
+options.compute_codebook = 0
 options.fname_codebook = 'codebook512'
 
-options.spatial_pyramids = 1
+options.spatial_pyramids = 0
 
 # Detector options:
 options.detector_options.descriptor = 'SIFT'

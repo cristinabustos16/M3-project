@@ -551,4 +551,4 @@ class general_options_class:
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     compute_descriptors = 1 # Compute or read the image descriptors.
     fname_descriptors = 'descriptors_SIFT_100' # In case of reading the descriptors, specify here the name of the file.
-    spatial_pyramids = 1 # Apply spatial pyramids in BoW framework or not
+    spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
