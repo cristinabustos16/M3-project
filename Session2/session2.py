@@ -7,6 +7,9 @@ from sklearn import svm
 from sklearn import cluster
 from sklearn.decomposition import PCA
 import sys
+from sklearn.metrics import confusion_matrix
+import itertools
+import matplotlib.pyplot as plt
 
 
 ##############################################################################
@@ -81,7 +84,7 @@ def main(options):
     print 'Final accuracy: ' + str(accuracy)
     end = time.time()
     print 'Done in '+str(end-start)+' secs.' 
-    
+
     return accuracy, end
 
 
@@ -136,7 +139,7 @@ def compute_and_write_codebook(options, fname_codebook):
     detector = create_detector(options.detector_options)
     
     # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector)
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
     
     # Fit the scaler and the PCA:
     stdSlr_kmeans, pca = preprocess_fit(D, options)
@@ -378,7 +381,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans)
     else:
         # Extract features form test images:
-        D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector)
+        D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector, options.detector_options)
         
         # Scale and apply PCA to the extracted features:
         D = preprocess_apply(D, stdSlr_kmeans, pca, options)
@@ -388,9 +391,17 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
+    predictions = clf.predict(visual_words_scaled)
     
     # Compute accuracy:
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
+    
+    cnf_matrix = confusion_matrix(test_labels, predictions)
+    plt.figure()
+    #class_names = ['coast','forest','highway','inside_city','mountain','Opencountry','street','tallbuilding']
+    class_names = set(test_labels)
+    plot_confusion_matrix(cnf_matrix, classes=class_names)
+    plt.show()
 
     return accuracy
     
@@ -487,6 +498,31 @@ def extract_visual_words(gray, detector, codebook, k):
     visual_words = np.bincount(words,minlength=k)
     
     return visual_words
+    
+#############################################################################
+def plot_confusion_matrix(cm, classes, cmap=plt.cm.Blues):
+    # This function prints and plots the confusion matrix.
+    # Normalization can be applied by setting `normalize=True`.
+    
+    
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    print(cm)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
     
 
 ##############################################################################
