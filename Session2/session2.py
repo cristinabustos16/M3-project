@@ -18,24 +18,39 @@ def train_and_evaluate(options):
     # Create the detector object
     detector = create_detector(options.detector_options)
     
+    # Initialize vector to store the accuracy of each training.
     accuracy = np.zeros(options.k_cv)
     
     # Read the subsets:
+    # We create a list where the element i is another list with all the file
+    # names belonging to subset i. The same for the labels of the images.
     subsets_filenames = list(xrange(options.k_cv))
     subsets_labels = list(xrange(options.k_cv))
+    # Loop over the subsets:
     for i in range(options.k_cv):
         subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','r'))
         subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','r'))
-        
+    
+    # Train and evaluate k times:
     for i in range(options.k_cv):
+        # First, we create a list with the names of the files we will use for
+        # training. These are the files in all the subsets except the i-th one.
+        # The same for the labels.
+        # Initialize:
         trainset_filenames = []
         trainset_labels = []
         for j in range(options.k_cv):
-            if(i != j):
+            if(i != j): # If it is not the i-th subset, add it to our trainset.
                 trainset_filenames.extend(subsets_filenames[j])
                 trainset_labels.extend(subsets_labels[j])
+        # For validation, we will use the rest of the images, i.e., the
+        # subset i.
         validation_filenames = subsets_filenames[i]
         validation_labels = subsets_labels[i]
+        
+        # The rest is exactly the same as a normal training-testing: we train
+        # with the trainset we have just build, and test with the evaluation
+        # set.
     
         # Train system:
         clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
@@ -163,7 +178,8 @@ def compute_and_write_descriptors(fname_descriptors, options):
     # Create the detector object
     detector = create_detector(options.detector_options)
     # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
+                                    detector, options.detector_options)
     # Write arrays:
     np.savetxt(fname_descriptors + '_D.txt', D, fmt = '%u')
     np.savetxt(fname_descriptors + '_dpi.txt', descriptors_per_image, fmt = '%u')
@@ -193,8 +209,11 @@ def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_widt
     if step_size < 1:
         step_size = 1
 
-    kpt = [cv2.KeyPoint(x, y, radius) for y in range(0, image_height, step_size)
-           for x in range(0, image_width, step_size)]
+    kpt = [cv2.KeyPoint(x, y, radius) for y in range(step_size-1, image_height-step_size, step_size)
+                                        for x in range(step_size-1, image_width-step_size, step_size)]
+
+    #kpt = [cv2.KeyPoint(x, y, radius) for y in range(0, image_height, step_size)
+     #      for x in range(0, image_width, step_size)]
 
     return kpt
 
@@ -205,19 +224,19 @@ def read_and_extract_features(images_filenames, detector, detector_options):
     # store descriptors in a python list of numpy arrays
     descriptors = []
     nimages = len(images_filenames)
-    descriptors_per_image = np.zeros(nimages, dtype=np.uint8)
+    descriptors_per_image = np.zeros(nimages, dtype=np.uint)
     for i in range(nimages):
         filename = images_filenames[i]
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        if (detector_options.dense_sampling == 1):
+        if detector_options.dense_sampling == 1:
             kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
                                  detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
-            des = detector.compute(gray, kpt)
+            kpt, des = detector.compute(gray, kpt)
             #descriptors_per_image[i] = kpt.__len__()
         else:
-            kpt,des = detector.detectAndCompute(gray,None)
+            kpt, des = detector.detectAndCompute(gray,None)
         descriptors_per_image[i] = kpt.__len__()
         #descriptors_per_image[i] = len(kpt)
         descriptors.append(des)
@@ -379,6 +398,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
                         
     if options.spatial_pyramids:
         visual_words_test = read_and_extract_visual_words(test_images_filenames, detector, codebook, options.kmeans)
+    
     else:
         # Extract features form test images:
         D, descriptors_per_image = read_and_extract_features(test_images_filenames, detector, options.detector_options)
@@ -405,6 +425,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
 
     return accuracy
     
+    
 ##############################################################################
 def read_and_extract_visual_words(images_filenames, detector, codebook, k):
     # extract keypoints and descriptors
@@ -420,6 +441,7 @@ def read_and_extract_visual_words(images_filenames, detector, codebook, k):
 
     return visual_words
     
+    
 ##############################################################################
 def spatial_pyramids(gray_l2, detector, codebook, k):
     #Level 2
@@ -432,11 +454,11 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     
     gray_l1_1 = gray_l2[0:height_l1, 0:width_l1]
     visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k)
-    gray_l1_2 = gray_l2[0:height_l1,width_l1 + 1:width_l2]
+    gray_l1_2 = gray_l2[0:height_l1,width_l1:width_l2]
     visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k)
-    gray_l1_3 = gray_l2[height_l1 + 1:height_l2,0:width_l1]
+    gray_l1_3 = gray_l2[height_l1:height_l2,0:width_l1]
     visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k)
-    gray_l1_4 = gray_l2[height_l1 + 1:height_l2,width_l1 + 1:width_l2]
+    gray_l1_4 = gray_l2[height_l1:height_l2,width_l1:width_l2]
     visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k)
     
     visual_words_l1 = np.concatenate((visual_words_l1_1, visual_words_l1_2, visual_words_l1_3,visual_words_l1_4),axis=0)
@@ -447,35 +469,35 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     
     gray_l0_1_1 = gray_l1_1[0:heigth_l0, 0:width_l0]
     visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k)
-    gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0 + 1:width_l1]
+    gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0:width_l1]
     visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k)
-    gray_l0_1_3 = gray_l1_1[heigth_l0 + 1:height_l1,0:width_l0]
+    gray_l0_1_3 = gray_l1_1[heigth_l0:height_l1,0:width_l0]
     visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k)
-    gray_l0_1_4 = gray_l1_1[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    gray_l0_1_4 = gray_l1_1[heigth_l0:height_l1,width_l0:width_l1]
     visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k)
     gray_l0_2_1 = gray_l1_2[0:heigth_l0, 0:width_l0]
     visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k)
-    gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0 + 1:width_l1]
+    gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0:width_l1]
     visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k)
-    gray_l0_2_3 = gray_l1_2[heigth_l0 + 1:height_l1,0:width_l0]
+    gray_l0_2_3 = gray_l1_2[heigth_l0:height_l1,0:width_l0]
     visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k)
-    gray_l0_2_4 = gray_l1_2[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    gray_l0_2_4 = gray_l1_2[heigth_l0:height_l1,width_l0:width_l1]
     visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k)
     gray_l0_3_1 = gray_l1_3[0:heigth_l0, 0:width_l0]
     visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k)
-    gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0 + 1:width_l1]
+    gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0:width_l1]
     visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k)
-    gray_l0_3_3 = gray_l1_3[heigth_l0 + 1:height_l1,0:width_l0]
+    gray_l0_3_3 = gray_l1_3[heigth_l0:height_l1,0:width_l0]
     visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k)
-    gray_l0_3_4 = gray_l1_3[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    gray_l0_3_4 = gray_l1_3[heigth_l0:height_l1,width_l0:width_l1]
     visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k)
     gray_l0_4_1 = gray_l1_4[0:heigth_l0, 0:width_l0]
     visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k)
-    gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0 + 1:width_l1]
+    gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0:width_l1]
     visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k)
-    gray_l0_4_3 = gray_l1_4[heigth_l0 + 1:height_l1,0:width_l0]
+    gray_l0_4_3 = gray_l1_4[heigth_l0:height_l1,0:width_l0]
     visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k)
-    gray_l0_4_4 = gray_l1_4[heigth_l0 + 1:height_l1,width_l0 + 1:width_l1]
+    gray_l0_4_4 = gray_l1_4[heigth_l0:height_l1,width_l0:width_l1]
     visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k)
     
     visual_words_l0 = np.concatenate( (\
@@ -487,6 +509,7 @@ def spatial_pyramids(gray_l2, detector, codebook, k):
     visual_words = np.concatenate((1/4 * visual_words_l2, 1/4 * visual_words_l1, 1/2 * visual_words_l0),axis=0)
             
     return visual_words
+    
     
 ##############################################################################
 def extract_visual_words(gray, detector, codebook, k):
@@ -543,9 +566,9 @@ class detector_options_class:
     nfeatures = 100
     SURF_hessian_ths = 400
     dense_sampling = 0  # Apply dense sampling to the selected detector
-    dense_sampling_max_nr_keypoints = 50000  # Maximum number of equally spaced keypoints
-    dense_sampling_keypoint_step_size = 5
-    dense_sampling_keypoint_radius = 10  # Maximum number of equally spaced keypoints
+    dense_sampling_max_nr_keypoints = 1500  # Maximum number of equally spaced keypoints
+    dense_sampling_keypoint_step_size = 10
+    dense_sampling_keypoint_radius = 5
     
 
 ##############################################################################
