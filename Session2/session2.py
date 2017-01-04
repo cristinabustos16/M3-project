@@ -437,9 +437,6 @@ def read_and_extract_visual_words(images_filenames, detector, codebook, options)
     
     
 ##############################################################################
-<<<<<<< HEAD
-def spatial_pyramids(gray_l2, detector, codebook, k, detector_options):
-=======
 def spatial_pyramid_new(gray, detector, codebook, options):
     
     height, width = gray.shape
@@ -460,7 +457,6 @@ def spatial_pyramid_new(gray, detector, codebook, options):
     
 ##############################################################################
 def spatial_pyramids(gray_l2, detector, codebook, k):
->>>>>>> spatial_pyramid
     #Level 2
     visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k, detector_options)
     
