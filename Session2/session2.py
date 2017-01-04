@@ -402,18 +402,13 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
-    predictions = clf.predict(visual_words_scaled)
     
     # Compute accuracy:
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
     
-    # Confussion matrix:
-    cnf_matrix = confusion_matrix(test_labels, predictions)
-    plt.figure()
-    #class_names = ['coast','forest','highway','inside_city','mountain','Opencountry','street','tallbuilding']
-    class_names = set(test_labels)
-    plot_confusion_matrix(cnf_matrix, classes=class_names)
-    plt.show()
+    # Confusion matrix:
+    if options.plot_confusion_matrix:
+        plot_confusion_matrix(visual_words_scaled, clf, test_labels)
 
     return accuracy
     
@@ -548,10 +543,18 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
     return visual_words
     
 #############################################################################
-def plot_confusion_matrix(cm, classes, cmap=plt.cm.Blues):
+def plot_confusion_matrix(visual_words_scaled, clf, test_labels):
     # This function prints and plots the confusion matrix.
     # Normalization can be applied by setting `normalize=True`.
+
+    print 'Computing confusion matrix...'
+    sys.stdout.flush()
     
+    cmap=plt.cm.Blues
+    predictions = clf.predict(visual_words_scaled)
+    cm = confusion_matrix(test_labels, predictions)
+    plt.figure()
+    classes = set(test_labels)
     
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title('Confusion matrix')
@@ -571,6 +574,9 @@ def plot_confusion_matrix(cm, classes, cmap=plt.cm.Blues):
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+    
+    plt.show()
+    print 'Done!'
     
 
 ##############################################################################
@@ -610,3 +616,4 @@ class general_options_class:
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
     depth = 3 # Numbef of levels of the spatial pyramid.
+    plot_confusion_matrix = 1 # Compute and show, or not, the confusion matrix.
