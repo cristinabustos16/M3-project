@@ -49,6 +49,8 @@ def train_and_evaluate(options):
         # subset i.
         validation_filenames = subsets_filenames[i]
         validation_labels = subsets_labels[i]
+
+        
         
         # The rest is exactly the same as a normal training-testing: we train
         # with the trainset we have just build, and test with the evaluation
@@ -143,7 +145,7 @@ def create_subsets_cross_validation(k_cv):
         
     
 ##############################################################################
-def compute_and_write_codebook(options, fname_codebook):
+def compute_and_write_codebook(options):
     
     # read the train and test files
     train_images_filenames = cPickle.load(open('train_images_filenames.dat','r'))
@@ -168,7 +170,9 @@ def compute_and_write_codebook(options, fname_codebook):
     codebook = compute_codebook(options.kmeans, D)
     
     # Write codebook:
-    cPickle.dump(codebook, open(fname_codebook+'.dat', "wb"))
+    cPickle.dump(codebook, open(options.fname_codebook+'.dat', "wb"))
+    
+    return codebook
     
     
 ##############################################################################
@@ -410,12 +414,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
     
     # Confussion matrix:
-    cnf_matrix = confusion_matrix(test_labels, predictions)
-    plt.figure()
-    #class_names = ['coast','forest','highway','inside_city','mountain','Opencountry','street','tallbuilding']
-    class_names = set(test_labels)
-    plot_confusion_matrix(cnf_matrix, classes=class_names)
-    plt.show()
+    compute_and_save_confusion_matrix(test_labels, predictions)
 	
 	# Compute ROC curve and ROC area for each class
     classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', 'forest', 'tallbuilding', 'highway']
@@ -442,13 +441,15 @@ def read_and_extract_visual_words(images_filenames, detector, codebook, options)
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        visual_words[i,:] = spatial_pyramid_new(gray, detector, codebook, options)
-
+        if options.spatial_pyramids:
+            visual_words[i,:] = spatial_pyramid(gray, detector, codebook, options)
+        else:
+            visual_words[i,:] = extract_visual_words(gray, detector, codebook, options)
     return visual_words
     
     
 ##############################################################################
-def spatial_pyramid_new(gray, detector, codebook, options):
+def spatial_pyramid(gray, detector, codebook, options):
     
     height, width = gray.shape
     
@@ -465,76 +466,6 @@ def spatial_pyramid_new(gray, detector, codebook, options):
                 visual_words.extend(visual_words_im)
                 
     return visual_words
-    
-    
-##############################################################################
-#def spatial_pyramids(gray_l2, detector, codebook, k):
-#    #Level 2
-#    visual_words_l2 = extract_visual_words(gray_l2, detector, codebook, k, detector_options)
-#    
-#    #Level 1
-#    height_l2, width_l2 = gray_l2.shape
-#    width_l1 = width_l2 / 2
-#    height_l1 = height_l2 / 2
-#    
-#    gray_l1_1 = gray_l2[0:height_l1, 0:width_l1]
-#    visual_words_l1_1 = extract_visual_words(gray_l1_1, detector, codebook, k, detector_options)
-#    gray_l1_2 = gray_l2[0:height_l1,width_l1:width_l2]
-#    visual_words_l1_2 = extract_visual_words(gray_l1_2, detector, codebook, k, detector_options)
-#    gray_l1_3 = gray_l2[height_l1:height_l2,0:width_l1]
-#    visual_words_l1_3 = extract_visual_words(gray_l1_3, detector, codebook, k, detector_options)
-#    gray_l1_4 = gray_l2[height_l1:height_l2,width_l1:width_l2]
-#    visual_words_l1_4 = extract_visual_words(gray_l1_4, detector, codebook, k, detector_options)
-#    
-#    visual_words_l1 = np.concatenate((visual_words_l1_1, visual_words_l1_2, visual_words_l1_3,visual_words_l1_4),axis=0)
-#
-#    #Level 0
-#    width_l0 = width_l1 / 2
-#    heigth_l0 = height_l1 / 2
-#    
-#    gray_l0_1_1 = gray_l1_1[0:heigth_l0, 0:width_l0]
-#    visual_words_l0_1_1 = extract_visual_words(gray_l0_1_1, detector, codebook, k, detector_options)
-#    gray_l0_1_2 = gray_l1_1[0:heigth_l0,width_l0:width_l1]
-#    visual_words_l0_1_2 = extract_visual_words(gray_l0_1_2, detector, codebook, k, detector_options)
-#    gray_l0_1_3 = gray_l1_1[heigth_l0:height_l1,0:width_l0]
-#    visual_words_l0_1_3 = extract_visual_words(gray_l0_1_3, detector, codebook, k, detector_options)
-#    gray_l0_1_4 = gray_l1_1[heigth_l0:height_l1,width_l0:width_l1]
-#    visual_words_l0_1_4 = extract_visual_words(gray_l0_1_4, detector, codebook, k, detector_options)
-#    gray_l0_2_1 = gray_l1_2[0:heigth_l0, 0:width_l0]
-#    visual_words_l0_2_1 = extract_visual_words(gray_l0_2_1, detector, codebook, k, detector_options)
-#    gray_l0_2_2 = gray_l1_2[0:heigth_l0,width_l0:width_l1]
-#    visual_words_l0_2_2 = extract_visual_words(gray_l0_2_2, detector, codebook, k, detector_options)
-#    gray_l0_2_3 = gray_l1_2[heigth_l0:height_l1,0:width_l0]
-#    visual_words_l0_2_3 = extract_visual_words(gray_l0_2_3, detector, codebook, k, detector_options)
-#    gray_l0_2_4 = gray_l1_2[heigth_l0:height_l1,width_l0:width_l1]
-#    visual_words_l0_2_4 = extract_visual_words(gray_l0_2_4, detector, codebook, k, detector_options)
-#    gray_l0_3_1 = gray_l1_3[0:heigth_l0, 0:width_l0]
-#    visual_words_l0_3_1 = extract_visual_words(gray_l0_3_1, detector, codebook, k, detector_options)
-#    gray_l0_3_2 = gray_l1_3[0:heigth_l0,width_l0:width_l1]
-#    visual_words_l0_3_2 = extract_visual_words(gray_l0_3_2, detector, codebook, k, detector_options)
-#    gray_l0_3_3 = gray_l1_3[heigth_l0:height_l1,0:width_l0]
-#    visual_words_l0_3_3 = extract_visual_words(gray_l0_3_3, detector, codebook, k, detector_options)
-#    gray_l0_3_4 = gray_l1_3[heigth_l0:height_l1,width_l0:width_l1]
-#    visual_words_l0_3_4 = extract_visual_words(gray_l0_3_4, detector, codebook, k, detector_options)
-#    gray_l0_4_1 = gray_l1_4[0:heigth_l0, 0:width_l0]
-#    visual_words_l0_4_1 = extract_visual_words(gray_l0_4_1, detector, codebook, k, detector_options)
-#    gray_l0_4_2 = gray_l1_4[0:heigth_l0,width_l0:width_l1]
-#    visual_words_l0_4_2 = extract_visual_words(gray_l0_4_2, detector, codebook, k, detector_options)
-#    gray_l0_4_3 = gray_l1_4[heigth_l0:height_l1,0:width_l0]
-#    visual_words_l0_4_3 = extract_visual_words(gray_l0_4_3, detector, codebook, k, detector_options)
-#    gray_l0_4_4 = gray_l1_4[heigth_l0:height_l1,width_l0:width_l1]
-#    visual_words_l0_4_4 = extract_visual_words(gray_l0_4_4, detector, codebook, k, detector_options)
-#    
-#    visual_words_l0 = np.concatenate( (\
-#        visual_words_l0_1_1, visual_words_l0_1_2, visual_words_l0_1_3,visual_words_l0_1_4, \
-#        visual_words_l0_2_1, visual_words_l0_2_2, visual_words_l0_2_3,visual_words_l0_2_4, \
-#        visual_words_l0_3_1, visual_words_l0_3_2, visual_words_l0_3_3,visual_words_l0_3_4, \
-#        visual_words_l0_4_1, visual_words_l0_4_2, visual_words_l0_4_3,visual_words_l0_4_4),axis=0)
-#    
-#    visual_words = np.concatenate((1/4 * visual_words_l2, 1/4 * visual_words_l1, 1/2 * visual_words_l0),axis=0)
-#            
-#    return visual_words
-    
     
 ##############################################################################
 def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
@@ -558,29 +489,33 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
     return visual_words
     
 #############################################################################
-def plot_confusion_matrix(cm, classes, cmap=plt.cm.Blues):
-    # This function prints and plots the confusion matrix.
-    # Normalization can be applied by setting `normalize=True`.
+def compute_and_save_confusion_matrix(test_labels, predictions):
+    cnf_matrix = confusion_matrix(test_labels, predictions)
+    plt.figure()
+    classes = set(test_labels)
     
-    
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    # Prints and plots the confusion matrix.
+    plt.imshow(cnf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title('Confusion matrix')
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)
 
-    print(cm)
+    print(cnf_matrix)
 
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
+    thresh = cnf_matrix.max() / 2.
+    for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
+        plt.text(j, i, cnf_matrix[i, j],
                  horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
+                 color="white" if cnf_matrix[i, j] > thresh else "black")
 
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
+    
+    plt.show()
+    plt.imsave('confusion_matrix')
 
 ##############################################################################
 def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options):
@@ -638,6 +573,7 @@ class general_options_class:
     scale_kmeans = 0 # Scale features before applying k-means.
     apply_pca = 0 # Apply, or not, PCA.
     kmeans = 512 # Number of clusters for k-means (codebook).
+    compute_subsets = 1 # Compute or not the cross-validation subsets
     k_cv = 5 # Number of subsets for k-fold cross-validation.
     compute_codebook = 1 # Compute or read the codebook.
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
