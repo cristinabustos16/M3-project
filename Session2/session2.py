@@ -185,6 +185,7 @@ def create_detector(detector_options):
     return detector
 
 
+##############################################################################
 def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_width):
 
     nr_keypoints = (image_height/step_size)*(image_width/step_size)
@@ -413,12 +414,8 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         plot_confusion_matrix(visual_words_scaled, clf, test_labels)
         
     # Compute ROC curve and ROC area for each class
-    classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', 'forest', 'tallbuilding', 'highway']
-    # Compute probabilities:
-    predicted_probabilities = clf.predict_proba(visual_words_scaled)
-    # Binarize the labels
-    binary_labels = label_binarize(test_labels, classes=classes)
-    compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options)
+    if options.compute_roc:
+        compute_and_save_roc_curve(clf, test_labels, options, visual_words_scaled)
 
     return accuracy
     
@@ -590,8 +587,17 @@ def plot_confusion_matrix(visual_words_scaled, clf, test_labels):
     
 
 ##############################################################################
-def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options):
+def compute_and_save_roc_curve(clf, test_labels, options, visual_words_scaled):
     # Compute ROC curve and ROC area for each class
+
+#    classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', 'forest', 'tallbuilding', 'highway']
+    classes = set(test_labels)
+    
+    # Compute probabilities:
+    predicted_probabilities = clf.predict_proba(visual_words_scaled)
+    # Binarize the labels
+    binary_labels = label_binarize(test_labels, classes=classes)
+    
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
 
     for i, color in zip(range(classes.__len__()), colors):
@@ -622,7 +628,7 @@ class SVM_options_class:
     sigma = 1
     degree = 3
     coef0 = 0
-    probability = 1 # This changes the way we aggregate predictions.
+    probability = 1 # This changes the way we aggregate predictions. Necessary for ROC.
     
 
 ##############################################################################
@@ -652,3 +658,4 @@ class general_options_class:
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
     depth = 3 # Numbef of levels of the spatial pyramid.
     plot_confusion_matrix = 1 # Compute and show, or not, the confusion matrix.
+    compute_roc = 1 # Compute and show ROC.
