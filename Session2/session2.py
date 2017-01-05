@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 from itertools import cycle
 from sklearn.preprocessing import label_binarize
+from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
 
 ##############################################################################
 def train_and_evaluate(options):
@@ -60,15 +63,25 @@ def train_and_evaluate(options):
         clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
                                     train_system(trainset_filenames, \
                                     trainset_labels, detector, options)
-    
+
         # Evaluate system:
         accuracy[i] = test_system(validation_filenames, validation_labels, \
                                 detector, codebook, clf, stdSlr_VW, \
-                                stdSlr_kmeans, pca, options)
-           
+                                stdSlr_kmeans, pca, options, -1)
+
     # Compute the mean and the standard deviation of the accuracies found:
     accuracy_mean = np.mean(accuracy)
     accuracy_sd = np.std(accuracy, ddof = 1)
+
+    # Write the results in a text file
+    report_name = 'report_' + options.file_name + '.txt'
+    fd = open(report_name, 'w')
+    try:
+        fd.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
+        fd.write('\n' + 'Std accuracy: ' + str(accuracy_sd))
+    except OSError:
+        sys.stdout.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
+    fd.close()
                      
     return accuracy_mean, accuracy_sd
 
@@ -95,14 +108,24 @@ def main(options):
     clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
                                     train_system(train_images_filenames, \
                                     train_labels, detector, options)
-    
+
+    report_name = 'report_' + options.file_name + '.txt'
+    fd = open(report_name, 'w')
+
     # Test system:
     accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
-                            clf, stdSlr_VW, stdSlr_kmeans, pca, options)
+                            clf, stdSlr_VW, stdSlr_kmeans, pca, options, fd)
 
     print 'Final accuracy: ' + str(accuracy)
     end = time.time()
-    print 'Done in '+str(end-start)+' secs.' 
+    print 'Done in '+str(end-start)+' secs.'
+
+    try:
+        fd.write('\n' + 'Final accuracy: ' + str(accuracy))
+        fd.write('\n' + 'Done in ' + str(end - start) + ' secs.')
+    except OSError:
+        sys.stdout.write('\n' + 'Final accuracy: ' + str(accuracy))
+    fd.close()
 
     return accuracy, end
 
@@ -189,6 +212,7 @@ def create_detector(detector_options):
     return detector
 
 
+##############################################################################
 def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_width):
 
     nr_keypoints = (image_height/step_size)*(image_width/step_size)
@@ -389,7 +413,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
     
 ##############################################################################
 def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
-                    stdSlr_VW, stdSlr_kmeans, pca, options):
+                    stdSlr_VW, stdSlr_kmeans, pca, options, file_descriptor):
     # get all the test data and predict their labels
                         
     if options.spatial_pyramids:
@@ -408,21 +432,29 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
-    predictions = clf.predict(visual_words_scaled)
     
     # Compute accuracy:
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
-    
-    # Confussion matrix:
-    compute_and_save_confusion_matrix(test_labels, predictions)
-	
-	# Compute ROC curve and ROC area for each class
-    classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', 'forest', 'tallbuilding', 'highway']
-    # Compute probabilities:
-    predicted_probabilities = clf.predict_proba(visual_words_scaled)
-    # Binarize the labels
-    binary_labels = label_binarize(test_labels, classes=classes)
-    compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options)
+
+    # Only if pass a valid file descriptor
+    if file_descriptor != -1:
+    	predictions = clf.predict(visual_words_scaled)
+        target_names = ['class mountain', 'class inside_city', 'class Opencountry', 'class coast', 'class street', \
+                    'class forest', 'class tallbuilding', 'class highway']
+        file_descriptor.write(classification_report(test_labels, predictions, target_names=target_names))
+        # Confussion matrix:
+        compute_and_save_confusion_matrix(test_labels, predictions, options)
+
+        classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', 'forest', 'tallbuilding', 'highway']
+        # Compute probabilities:
+        predicted_probabilities = clf.predict_proba(visual_words_scaled)
+        predicted_score = clf.decision_function(visual_words_scaled)
+        # Binarize the labels
+        binary_labels = label_binarize(test_labels, classes=classes)
+        # Compute ROC curve and ROC area for each class
+        compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options)
+        # Compute Precision-Recall curve for each class
+        compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, options)
 
     return accuracy
     
@@ -489,7 +521,7 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
     return visual_words
     
 #############################################################################
-def compute_and_save_confusion_matrix(test_labels, predictions):
+def compute_and_save_confusion_matrix(test_labels, predictions,options):
     cnf_matrix = confusion_matrix(test_labels, predictions)
     plt.figure()
     classes = set(test_labels)
@@ -514,14 +546,17 @@ def compute_and_save_confusion_matrix(test_labels, predictions):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     
-    plt.show()
-    plt.imsave('confusion_matrix')
+    if options.save_plots:
+        file_name = 'conf_matrix_' + options.file_name + '.png'
+        plt.savefig(file_name, bbox_inches='tight')
+    if options.show_plots:
+        plt.show()
 
 ##############################################################################
 def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options):
     # Compute ROC curve and ROC area for each class
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
-
+    plt.figure()
     for i, color in zip(range(classes.__len__()), colors):
         fpr, tpr, thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
         roc_auc = auc(fpr, tpr)
@@ -535,11 +570,42 @@ def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, 
     plt.ylabel('True Positive Rate')
     plt.title('ROC Curve')
     plt.legend(loc="lower right", fontsize='x-small')
-    file_name = "roc_curve_desc_%s_dense_%s_kmeans_%s_pyramids_%s_kernel_%s_C_%s_sigma_%s.png" % (options.detector_options.descriptor, \
-                                                     options.detector_options.dense_sampling, options.kmeans, options.spatial_pyramids, \
-                                                              options.SVM_options.kernel, options.SVM_options.C, options.SVM_options.sigma)
-    plt.savefig(file_name, bbox_inches='tight')
-    #plt.show()
+    if options.save_plots:
+        file_name = 'roc_curve_' + options.file_name + '.png'
+        plt.savefig(file_name, bbox_inches='tight')
+    if options.show_plots:
+        plt.show()
+
+##############################################################################
+def compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, options):
+    # Compute Precision-Recall and plot curve
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+    colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
+
+    for i in range(classes.__len__()):
+        precision[i], recall[i], _ = precision_recall_curve(binary_labels[:, i],
+                                                            predicted_score[:, i])
+        average_precision[i] = average_precision_score(binary_labels[:, i], predicted_score[:, i])
+
+    plt.figure()
+    for i, color in zip(range(classes.__len__()), colors):
+        plt.plot(recall[i], precision[i], color=color, lw=2,
+                 label='Label \'%s\' (Avg. precision = %0.2f)'
+                       % (classes[i],average_precision[i]))
+
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve')
+    plt.legend(loc="lower right", fontsize='x-small')
+    if options.save_plots:
+        file_name = 'prec_recall__curve_' + options.file_name + '.png'
+        plt.savefig(file_name, bbox_inches='tight')
+    if options.show_plots:
+        plt.show()
 
 ##############################################################################
 class SVM_options_class:
@@ -549,7 +615,7 @@ class SVM_options_class:
     sigma = 1
     degree = 3
     coef0 = 0
-    probability = 1 # This changes the way we aggregate predictions.
+    probability = 1 # This changes the way we aggregate predictions. Necessary for ROC.
     
 
 ##############################################################################
@@ -579,3 +645,6 @@ class general_options_class:
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
     depth = 3 # Numbef of levels of the spatial pyramid.
+    file_name = 'test'
+    show_plots = 1
+    save_plots = 1
