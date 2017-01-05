@@ -67,7 +67,7 @@ def train_and_evaluate(options):
         # Evaluate system:
         accuracy[i] = test_system(validation_filenames, validation_labels, \
                                 detector, codebook, clf, stdSlr_VW, \
-                                stdSlr_kmeans, pca, options, -1)
+                                stdSlr_kmeans, pca, options)
 
     # Compute the mean and the standard deviation of the accuracies found:
     accuracy_mean = np.mean(accuracy)
@@ -413,7 +413,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
     
 ##############################################################################
 def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
-                    stdSlr_VW, stdSlr_kmeans, pca, options, file_descriptor):
+                    stdSlr_VW, stdSlr_kmeans, pca, options):
     # get all the test data and predict their labels
                         
     if options.spatial_pyramids:
@@ -437,11 +437,11 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     accuracy = 100 * clf.score(visual_words_scaled, test_labels)
 
     # Only if pass a valid file descriptor
-    if file_descriptor != -1:
-    	predictions = clf.predict(visual_words_scaled)
+    if options.file_descriptor != -1:
+        predictions = clf.predict(visual_words_scaled)
         target_names = ['class mountain', 'class inside_city', 'class Opencountry', 'class coast', 'class street', \
                     'class forest', 'class tallbuilding', 'class highway']
-        file_descriptor.write(classification_report(test_labels, predictions, target_names=target_names))
+        options.file_descriptor.write(classification_report(test_labels, predictions, target_names=target_names))
         # Confussion matrix:
         compute_and_save_confusion_matrix(test_labels, predictions, options)
 
@@ -547,7 +547,7 @@ def compute_and_save_confusion_matrix(test_labels, predictions,options):
     plt.xlabel('Predicted label')
     
     if options.save_plots:
-        file_name = 'conf_matrix_' + options.file_name + '.png'
+        file_name = 'conf_matrix_' + options.plot_name + '.png'
         plt.savefig(file_name, bbox_inches='tight')
     if options.show_plots:
         plt.show()
@@ -571,7 +571,7 @@ def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, 
     plt.title('ROC Curve')
     plt.legend(loc="lower right", fontsize='x-small')
     if options.save_plots:
-        file_name = 'roc_curve_' + options.file_name + '.png'
+        file_name = 'roc_curve_' + options.plot_name + '.png'
         plt.savefig(file_name, bbox_inches='tight')
     if options.show_plots:
         plt.show()
@@ -602,7 +602,7 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, clas
     plt.title('Precision-Recall Curve')
     plt.legend(loc="lower right", fontsize='x-small')
     if options.save_plots:
-        file_name = 'prec_recall__curve_' + options.file_name + '.png'
+        file_name = 'prec_recall__curve_' + options.plot_name + '.png'
         plt.savefig(file_name, bbox_inches='tight')
     if options.show_plots:
         plt.show()
@@ -645,6 +645,8 @@ class general_options_class:
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
     depth = 3 # Numbef of levels of the spatial pyramid.
+    plot_name = 'test'
     file_name = 'test'
     show_plots = 1
     save_plots = 1
+    file_descriptor = -1
