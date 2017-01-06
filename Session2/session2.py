@@ -114,7 +114,7 @@ def main(options):
 
     # Test system:
     accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
-                            clf, stdSlr_VW, stdSlr_kmeans, pca, options, fd)
+                            clf, stdSlr_VW, stdSlr_kmeans, pca, options)
 
     print 'Final accuracy: ' + str(accuracy)
     end = time.time()
