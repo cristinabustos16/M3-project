@@ -20,6 +20,8 @@ from sklearn.metrics import average_precision_score
 ##############################################################################
 def train_and_evaluate(options):
 
+    start = time.time()
+
     # Create the detector object
     detector = create_detector(options.detector_options)
     
@@ -44,6 +46,7 @@ def train_and_evaluate(options):
         # Initialize:
         trainset_filenames = []
         trainset_labels = []
+
         for j in range(options.k_cv):
             if(i != j): # If it is not the i-th subset, add it to our trainset.
                 trainset_filenames.extend(subsets_filenames[j])
@@ -52,8 +55,6 @@ def train_and_evaluate(options):
         # subset i.
         validation_filenames = subsets_filenames[i]
         validation_labels = subsets_labels[i]
-
-        
         
         # The rest is exactly the same as a normal training-testing: we train
         # with the trainset we have just build, and test with the evaluation
@@ -63,26 +64,29 @@ def train_and_evaluate(options):
         clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
                                     train_system(trainset_filenames, \
                                     trainset_labels, detector, options)
-
+    
         # Evaluate system:
         accuracy[i] = test_system(validation_filenames, validation_labels, \
                                 detector, codebook, clf, stdSlr_VW, \
                                 stdSlr_kmeans, pca, options)
-
+           
     # Compute the mean and the standard deviation of the accuracies found:
     accuracy_mean = np.mean(accuracy)
     accuracy_sd = np.std(accuracy, ddof = 1)
 
     # Write the results in a text file
     report_name = 'report_' + options.file_name + '.txt'
-    fd = open(report_name, 'w')
+    options.file_descriptor = open(report_name, 'w')
     try:
-        fd.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
-        fd.write('\n' + 'Std accuracy: ' + str(accuracy_sd))
+        options.file_descriptor.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
+        options.file_descriptor.write('\n' + 'Std accuracy: ' + str(accuracy_sd))
     except OSError:
         sys.stdout.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
-    fd.close()
-                     
+    options.file_descriptor.close()
+
+    end = time.time()
+    print 'Done in '+str(end-start)+' secs.'
+
     return accuracy_mean, accuracy_sd
 
 
@@ -110,22 +114,23 @@ def main(options):
                                     train_labels, detector, options)
 
     report_name = 'report_' + options.file_name + '.txt'
-    fd = open(report_name, 'w')
+    options.file_descriptor = open(report_name, 'w')
 
     # Test system:
     accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
                             clf, stdSlr_VW, stdSlr_kmeans, pca, options)
 
+    try:
+        options.file_descriptor.write('\n' + 'Final accuracy: ' + str(accuracy))
+        options.file_descriptor.write('\n' + 'Done in ' + str(end - start) + ' secs.')
+    except OSError:
+        sys.stdout.write('\n' + 'Final accuracy: ' + str(accuracy))
+
+    options.file_descriptor.close()
+
     print 'Final accuracy: ' + str(accuracy)
     end = time.time()
     print 'Done in '+str(end-start)+' secs.'
-
-    try:
-        fd.write('\n' + 'Final accuracy: ' + str(accuracy))
-        fd.write('\n' + 'Done in ' + str(end - start) + ' secs.')
-    except OSError:
-        sys.stdout.write('\n' + 'Final accuracy: ' + str(accuracy))
-    fd.close()
 
     return accuracy, end
 
@@ -251,8 +256,8 @@ def read_and_extract_features(images_filenames, detector, detector_options):
             #descriptors_per_image[i] = kpt.__len__()
         else:
             kpt, des = detector.detectAndCompute(gray,None)
-        descriptors_per_image[i] = kpt.__len__()
-        #descriptors_per_image[i] = len(kpt)
+        #descriptors_per_image[i] = kpt.__len__()
+        descriptors_per_image[i] = len(kpt)
         descriptors.append(des)
         print str(descriptors_per_image[i]) + ' extracted keypoints and descriptors'
     
@@ -473,13 +478,14 @@ def read_and_extract_visual_words(images_filenames, detector, codebook, options)
         print 'Reading image ' + filename
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
+        # visual_words[i,:] = spatial_pyramid(gray, detector, codebook, options)
         if options.spatial_pyramids:
             visual_words[i,:] = spatial_pyramid(gray, detector, codebook, options)
         else:
-            visual_words[i,:] = extract_visual_words(gray, detector, codebook, options)
+            visual_words[i,:] = extract_visual_words(gray, detector, codebook,options.kmeans, options.detector_options)
+
     return visual_words
-    
-    
+
 ##############################################################################
 def spatial_pyramid(gray, detector, codebook, options):
     
@@ -499,6 +505,7 @@ def spatial_pyramid(gray, detector, codebook, options):
                 
     return visual_words
     
+
 ##############################################################################
 def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
     if detector_options.dense_sampling == 1:
