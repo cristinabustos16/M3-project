@@ -9,7 +9,7 @@ from sklearn.decomposition import PCA
 import sys
 from sklearn.metrics import confusion_matrix
 import itertools
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 from itertools import cycle
 from sklearn.preprocessing import label_binarize
@@ -41,7 +41,6 @@ def train_and_evaluate(options):
             subsets_labels[i] = pickle.load(f2)
         #subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','rb'))
         #subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','rb'))
-    
     
     # Train and evaluate k times:
     for i in range(options.k_cv):
@@ -344,8 +343,11 @@ def compute_codebook(kmeans, D):
 ##############################################################################
 def read_codebook(fname_codebook):
     # Read the codebook from the specified file.
-    with open(fname_codebook+'.dat', "r") as input_file:
+    with open(fname_codebook+'.dat', 'rb') as input_file:  # b for binary
         codebook = pickle.load(input_file)
+
+    # with open(fname_codebook+'.dat', "r") as input_file:
+    #     codebook = cPickle.load(input_file)
     return codebook
     
     
@@ -558,58 +560,58 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
 #############################################################################
 def compute_and_save_confusion_matrix(test_labels, predictions,options):
     cnf_matrix = confusion_matrix(test_labels, predictions)
-    plt.figure()
-    classes = set(test_labels)
-    
-    # Prints and plots the confusion matrix.
-    plt.imshow(cnf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title('Confusion matrix')
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
-
-    print(cnf_matrix)
-
-    thresh = cnf_matrix.max() / 2.
-    for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
-        plt.text(j, i, cnf_matrix[i, j],
-                 horizontalalignment="center",
-                 color="white" if cnf_matrix[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    
-    if options.save_plots:
-        file_name = 'conf_matrix_' + options.plot_name + '.png'
-        plt.savefig(file_name, bbox_inches='tight')
-    if options.show_plots:
-        plt.show()
+    # plt.figure()
+    # classes = set(test_labels)
+    #
+    # # Prints and plots the confusion matrix.
+    # plt.imshow(cnf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    # plt.title('Confusion matrix')
+    # plt.colorbar()
+    # tick_marks = np.arange(len(classes))
+    # plt.xticks(tick_marks, classes, rotation=45)
+    # plt.yticks(tick_marks, classes)
+    #
+    # print(cnf_matrix)
+    #
+    # thresh = cnf_matrix.max() / 2.
+    # for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
+    #     plt.text(j, i, cnf_matrix[i, j],
+    #              horizontalalignment="center",
+    #              color="white" if cnf_matrix[i, j] > thresh else "black")
+    #
+    # plt.tight_layout()
+    # plt.ylabel('True label')
+    # plt.xlabel('Predicted label')
+    #
+    # if options.save_plots:
+    #     file_name = 'conf_matrix_' + options.plot_name + '.png'
+    #     plt.savefig(file_name, bbox_inches='tight')
+    # if options.show_plots:
+    #     plt.show()
 
 ##############################################################################
 def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options):
     # Compute ROC curve and ROC area for each class
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
-    plt.figure()
-    for i, color in zip(range(classes.__len__()), colors):
-        fpr, tpr, thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
-        roc_auc = auc(fpr, tpr)
-        plt.plot(fpr, tpr, lw=2, color=color,
-             label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc))
-
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([-0.05, 1.05])
-    plt.ylim([-0.05, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve')
-    plt.legend(loc="lower right", fontsize='x-small')
-    if options.save_plots:
-        file_name = 'roc_curve_' + options.plot_name + '.png'
-        plt.savefig(file_name, bbox_inches='tight')
-    if options.show_plots:
-        plt.show()
+    # plt.figure()
+    # for i, color in zip(range(classes.__len__()), colors):
+    #     fpr, tpr, thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
+    #     roc_auc = auc(fpr, tpr)
+    #     plt.plot(fpr, tpr, lw=2, color=color,
+    #          label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc))
+    #
+    # plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    # plt.xlim([-0.05, 1.05])
+    # plt.ylim([-0.05, 1.05])
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+    # plt.title('ROC Curve')
+    # plt.legend(loc="lower right", fontsize='x-small')
+    # if options.save_plots:
+    #     file_name = 'roc_curve_' + options.plot_name + '.png'
+    #     plt.savefig(file_name, bbox_inches='tight')
+    # if options.show_plots:
+    #     plt.show()
 
 ##############################################################################
 def compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, options):
@@ -624,23 +626,23 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, clas
                                                             predicted_score[:, i])
         average_precision[i] = average_precision_score(binary_labels[:, i], predicted_score[:, i])
 
-    plt.figure()
-    for i, color in zip(range(classes.__len__()), colors):
-        plt.plot(recall[i], precision[i], color=color, lw=2,
-                 label='Label \'%s\' (Avg. precision = %0.2f)'
-                       % (classes[i],average_precision[i]))
-
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title('Precision-Recall Curve')
-    plt.legend(loc="lower right", fontsize='x-small')
-    if options.save_plots:
-        file_name = 'prec_recall__curve_' + options.plot_name + '.png'
-        plt.savefig(file_name, bbox_inches='tight')
-    if options.show_plots:
-        plt.show()
+    # plt.figure()
+    # for i, color in zip(range(classes.__len__()), colors):
+    #     plt.plot(recall[i], precision[i], color=color, lw=2,
+    #              label='Label \'%s\' (Avg. precision = %0.2f)'
+    #                    % (classes[i],average_precision[i]))
+    #
+    # plt.xlim([0.0, 1.0])
+    # plt.ylim([0.0, 1.05])
+    # plt.xlabel('Recall')
+    # plt.ylabel('Precision')
+    # plt.title('Precision-Recall Curve')
+    # plt.legend(loc="lower right", fontsize='x-small')
+    # if options.save_plots:
+    #     file_name = 'prec_recall__curve_' + options.plot_name + '.png'
+    #     plt.savefig(file_name, bbox_inches='tight')
+    # if options.show_plots:
+    #     plt.show()
 
 ##############################################################################
 class SVM_options_class:
@@ -685,3 +687,22 @@ class general_options_class:
     show_plots = 0
     save_plots = 1
     file_descriptor = -1
+
+#############################################################################
+
+# Cluster main
+
+# Select options:
+options = general_options_class()
+
+options.file_name = sys.argv[1]
+options.SVM_options.kernel = sys.argv[2]
+options.detector_options.descriptor = sys.argv[3]
+options.detector_options.nfeatures = int(sys.argv[4])
+options.detector_options.dense_sampling = int(sys.argv[5])
+options.spatial_pyramids = int(sys.argv[6])
+options.depth = int(sys.argv[7])
+options.kmeans = int(sys.argv[8])
+
+# Call main program:
+accuracy_mean, accuracy_sd = train_and_evaluate(options)
