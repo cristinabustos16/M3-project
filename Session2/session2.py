@@ -73,7 +73,7 @@ def train_and_evaluate(options):
         # Evaluate system:
         accuracy[i] = test_system(validation_filenames, validation_labels, \
                                 detector, codebook, clf, stdSlr_VW, \
-                                stdSlr_kmeans, pca, options)
+                                stdSlr_kmeans, pca, options, -1)
            
     # Compute the mean and the standard deviation of the accuracies found:
     accuracy_mean = np.mean(accuracy)
@@ -123,7 +123,7 @@ def main(options):
     detector = create_detector(options.detector_options)
     
     # Train system:
-    clf, codebook, stdSlr_VW, stdSlr_kmeans, pca = \
+    clf, codebook, stdSlr_VW, stdSlr_kmeans, pca, visual_words_train = \
                                     train_system(train_images_filenames, \
                                     train_labels, detector, options)
 
@@ -132,7 +132,7 @@ def main(options):
 
     # Test system:
     accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
-                            clf, stdSlr_VW, stdSlr_kmeans, pca, options)
+                            clf, stdSlr_VW, stdSlr_kmeans, pca, options, visual_words_train)
     end = time.time()
     try:
         options.file_descriptor.write('\n' + 'Final accuracy: ' + str(accuracy))
@@ -381,6 +381,10 @@ def train_classifier(X, L, SVM_options):
     elif(SVM_options.kernel == 'sigmoid'):
         clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0, \
                 random_state = 1, probability = SVM_options.probability).fit(X, L)
+    elif(SVM_options.kernel == 'precomputed'):
+        kernelMatrix = histogramIntersection(X, X)
+        clf = svm.SVC(kernel='precomputed', C = SVM_options.C, coef0 = SVM_options.coef0, \
+                random_state = 1, probability = SVM_options.probability).fit(kernelMatrix, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
@@ -437,16 +441,16 @@ def train_system(train_images_filenames, train_labels, detector, options):
     
     # Scale words:
     visual_words = stdSlr_VW.transform(visual_words)
-    
+    print(visual_words.shape)
     # Train the classifier:
     clf = train_classifier(visual_words, train_labels, options.SVM_options)
     
-    return clf, codebook, stdSlr_VW, stdSlr_kmeans, pca
+    return clf, codebook, stdSlr_VW, stdSlr_kmeans, pca, visual_words
     
     
 ##############################################################################
 def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
-                    stdSlr_VW, stdSlr_kmeans, pca, options):
+                    stdSlr_VW, stdSlr_kmeans, pca, options, visual_words_train):
     # get all the test data and predict their labels
                         
     if options.spatial_pyramids:
@@ -471,7 +475,12 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
 
     # Only if pass a valid file descriptor
     if options.file_descriptor != -1:
-        predictions = clf.predict(visual_words_scaled)
+        if(options.SVM_options.kernel == 'precomputed'):
+            print('precomputed')
+            predictMatrix = histogramIntersection(stdSlr_VW.transform(visual_words_scaled), visual_words_train)
+            predictions = clf.predict(predictMatrix)
+        else:
+            predictions = clf.predict(visual_words_scaled)
         target_names = ['class mountain', 'class inside_city', 'class Opencountry', 'class coast', 'class street', \
                     'class forest', 'class tallbuilding', 'class highway']
         options.file_descriptor.write(classification_report(test_labels, predictions, target_names=target_names))
@@ -554,6 +563,16 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
     visual_words = np.bincount(words,minlength=kmeans)
     
     return visual_words
+
+
+##############################################################################
+def  histogramIntersection(M, N):
+    K_int = np.zeros(len(M))
+    #K_int = 0
+    for i in range(M.shape[0]):
+        for j in range(M.shape[1]):
+            K_int[i] = K_int[i] + min(M[i][j],N[i][j])
+    return list(K_int)
     
 #############################################################################
 def compute_and_save_confusion_matrix(test_labels, predictions,options):

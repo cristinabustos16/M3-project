@@ -12,6 +12,9 @@ options.fname_codebook = 'codebook512'
 options.spatial_pyramids = 0
 options.depth = 3
 
+options.histogram_kernel = 1
+
+#options.SVM_options.kernel = 'precomputed'
 # Detector options:
 options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
