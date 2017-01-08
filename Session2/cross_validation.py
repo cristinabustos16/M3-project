@@ -33,18 +33,18 @@ options.k_cv = 5
 options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
 #Dense sampling options
-options.detector_options.dense_sampling = 1
+options.detector_options.dense_sampling = 0
 # Maximum number of equally spaced keypoints (Grid size)
 options.detector_options.dense_sampling_max_nr_keypoints = 1500
 options.detector_options.dense_sampling_keypoint_step_size = 8
 options.detector_options.dense_sampling_keypoint_radius = 8
 #Spatial pyramids options
-options.spatial_pyramids = 1
-options.depth = 2
+options.spatial_pyramids = 0
+options.depth = 3
 
 #SVM options
 options.SVM_options.kernel = 'histogramIntersection'
-options.SVM_options.C = 1
+options.SVM_options.C = 1.5
 options.SVM_options.sigma = 1
 options.SVM_options.degree = 3
 options.SVM_options.coef0 = 0
@@ -54,7 +54,7 @@ options.SVM_options.probability = 1
 options.file_descriptor = open('report.txt', 'w')
 options.save_plots = 1
 options.plot_name = 'test'
-options.file_name = 'test_pyramids'
+options.file_name = 'test_kernel_'
 options.show_plots = 1
 
 #Compute or read the codebook
