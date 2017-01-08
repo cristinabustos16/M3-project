@@ -419,6 +419,8 @@ def train_system(train_images_filenames, train_labels, detector, options):
         D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
                     detector, options.detector_options)
     
+        
+        
         # Getting the codebook:
         if options.compute_codebook:
             # Compute the codebook:
@@ -436,6 +438,17 @@ def train_system(train_images_filenames, train_labels, detector, options):
         # Cast features to Bag of Visual Words:
         visual_words = descriptors2words(D, codebook, options.kmeans, descriptors_per_image)
 
+        
+    #save visual words for testing
+    # Saving the objects:
+    with open('objs.pickle', 'w') as f:  
+        pickle.dump([D, descriptors_per_image], f)
+        
+    #getting back visual_words
+    # Getting back the objects:
+    #with open('objs.pickle') as f:  # Python 3: open(..., 'rb')
+    #D, descriptors_per_image = pickle.load(f)
+    
     # Fit scaler for words:
     stdSlr_VW = StandardScaler().fit(visual_words)
     
@@ -469,16 +482,24 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
         
     # Scale visual words:
     visual_words_scaled = stdSlr_VW.transform(visual_words_test)
-    
+    print('visual_words_scaled 11')
+    print(visual_words_scaled.shape)
     # Compute accuracy:
-    accuracy = 100 * clf.score(visual_words_scaled, test_labels)
+    if(options.SVM_options.kernel == 'precomputed'):
+        accuracy = 0
+    else:
+        accuracy = 100 * clf.score(visual_words_scaled, test_labels)
 
     # Only if pass a valid file descriptor
     if options.file_descriptor != -1:
         if(options.SVM_options.kernel == 'precomputed'):
             print('precomputed')
-            predictMatrix = histogramIntersection(stdSlr_VW.transform(visual_words_scaled), visual_words_train)
+            print('visual_words_scaled')
+            print(visual_words_scaled.shape)
+            predictMatrix = histogramIntersection(visual_words_scaled, visual_words_train)
             predictions = clf.predict(predictMatrix)
+            accuracy = 100 * clf.score(visual_words_scaled, test_labels)
+            print('accuracy'+accuracy)
         else:
             predictions = clf.predict(visual_words_scaled)
         target_names = ['class mountain', 'class inside_city', 'class Opencountry', 'class coast', 'class street', \
@@ -567,12 +588,15 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
 
 ##############################################################################
 def  histogramIntersection(M, N):
-    K_int = np.zeros(len(M))
+    n_samples , n_features = M.shape
+    K_int = np.zeros(shape=(n_samples,n_samples),dtype=np.float)
     #K_int = 0
-    for i in range(M.shape[0]):
-        for j in range(M.shape[1]):
-            K_int[i] = K_int[i] + min(M[i][j],N[i][j])
-    return list(K_int)
+    for i in range(n_samples):
+        for j in range(n_samples):
+            K_int[i][j] = np.sum(np.minimum(M[i],N[j]))
+            
+
+    return K_int
     
 #############################################################################
 def compute_and_save_confusion_matrix(test_labels, predictions,options):
