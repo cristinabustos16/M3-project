@@ -73,7 +73,7 @@ def train_and_evaluate(options):
         # Evaluate system:
         accuracy[i] = test_system(validation_filenames, validation_labels, \
                                 detector, codebook, clf, stdSlr_VW, \
-                                stdSlr_kmeans, pca, options, -1)
+                                stdSlr_kmeans, pca, options)
            
     # Compute the mean and the standard deviation of the accuracies found:
     accuracy_mean = np.mean(accuracy)
@@ -251,7 +251,10 @@ def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_widt
     nr_keypoints = (image_height/step_size)*(image_width/step_size)
     while not nr_keypoints <= max_nr_keypoints:
         step_size = step_size - 1
-        nr_keypoints = (image_height / step_size) * (image_width / step_size)
+        if step_size < 1:
+            step_size = 1
+            nr_keypoints = (image_height / step_size) * (image_width / step_size)
+            break
 
     if step_size < 1:
         step_size = 1
