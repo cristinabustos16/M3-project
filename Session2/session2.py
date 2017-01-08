@@ -538,6 +538,10 @@ def spatial_pyramid(gray, detector, codebook, options):
                 im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
                 visual_words_im = extract_visual_words(im, detector, codebook, \
                         options.kmeans, options.detector_options)
+#                if level == 2:
+#                    visual_words_im = 1/2 * visual_words_im
+#                else:
+#                    visual_words_im = 1/4 * visual_words_im
                 visual_words.extend(visual_words_im)
                 
     return visual_words
@@ -575,6 +579,41 @@ def  histogramIntersection(M, N):
     return list(K_int)
     
 #############################################################################
+def compute_confusion_matrix(test_labels, predictions):
+    return confusion_matrix(test_labels, predictions)
+    
+#############################################################################
+def save_confusion_matrix(cnf_matrix, test_labels, options):
+    plt.figure()
+    classes = set(test_labels)
+    
+    # Prints and plots the confusion matrix.
+    plt.imshow(cnf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    print(cnf_matrix)
+
+    thresh = cnf_matrix.max() / 2.
+    for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
+        plt.text(j, i, cnf_matrix[i, j],
+                 horizontalalignment="center",
+                 color="white" if cnf_matrix[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    
+    if options.save_plots:
+        file_name = 'conf_matrix_' + options.plot_name + '.png'
+        plt.savefig(file_name, bbox_inches='tight')
+    if options.show_plots:
+        plt.show()
+    
+#############################################################################
 def compute_and_save_confusion_matrix(test_labels, predictions,options):
     cnf_matrix = confusion_matrix(test_labels, predictions)
     plt.figure()
@@ -607,6 +646,41 @@ def compute_and_save_confusion_matrix(test_labels, predictions,options):
         plt.show()
 
 ##############################################################################
+def compute_roc_curve(binary_labels, predicted_probabilities, classes):
+    # Compute ROC curve and ROC area for each class
+    colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
+    fpr = np.zeros((len(classes)),dtype = np.object)
+    tpr = np.zeros((len(classes)),dtype = np.object)
+    roc_auc = np.zeros((len(classes)),dtype = np.float32)
+    for i, color in zip(range(classes.__len__()), colors):
+        fpr[i], tpr[i], thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+        
+    return fpr, tpr, roc_auc
+
+##############################################################################
+def save_roc_curve(fpr, tpr, roc_auc, classes, options):
+    # Compute ROC curve and ROC area for each class
+    colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
+    plt.figure()
+    for i, color in zip(range(classes.__len__()), colors):
+        plt.plot(fpr[i], tpr[i], lw=2, color=color,
+             label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve')
+    plt.legend(loc="lower right", fontsize='x-small')
+    if options.save_plots:
+        file_name = 'roc_curve_' + options.plot_name + '.png'
+        plt.savefig(file_name, bbox_inches='tight')
+    if options.show_plots:
+        plt.show()
+        
+##############################################################################
 def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, options):
     # Compute ROC curve and ROC area for each class
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
@@ -631,6 +705,42 @@ def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, 
         plt.show()
 
 ##############################################################################
+def compute_precision_recall_curve(binary_labels, predicted_score, classes):
+    # Compute Precision-Recall and plot curve
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+
+    for i in range(classes.__len__()):
+        precision[i], recall[i], _ = precision_recall_curve(binary_labels[:, i],
+                                                            predicted_score[:, i])
+        average_precision[i] = average_precision_score(binary_labels[:, i], predicted_score[:, i])
+    
+    return precision, recall, average_precision
+    
+##############################################################################
+def save_precision_recall_curve(recall, precision, average_precision, classes, options):
+    colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
+    
+    plt.figure()
+    for i, color in zip(range(classes.__len__()), colors):
+        plt.plot(recall[i], precision[i], color=color, lw=2,
+                 label='Label \'%s\' (Avg. precision = %0.2f)'
+                       % (classes[i],average_precision[i]))
+
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve')
+    plt.legend(loc="lower right", fontsize='x-small')
+    if options.save_plots:
+        file_name = 'prec_recall__curve_' + options.plot_name + '.png'
+        plt.savefig(file_name, bbox_inches='tight')
+    if options.show_plots:
+        plt.show()
+    
+##############################################################################
 def compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, options):
     # Compute Precision-Recall and plot curve
     precision = dict()
@@ -639,8 +749,7 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, clas
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
 
     for i in range(classes.__len__()):
-        precision[i], recall[i], _ = precision_recall_curve(binary_labels[:, i],
-                                                            predicted_score[:, i])
+        precision[i], recall[i], _ = precision_recall_curve(binary_labels[:, i], predicted_score[:, i])
         average_precision[i] = average_precision_score(binary_labels[:, i], predicted_score[:, i])
 
     plt.figure()

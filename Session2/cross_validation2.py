@@ -23,16 +23,17 @@ options = general_options_class()
 #Codebook options
 options.compute_codebook = 0
 options.fname_codebook = 'codebook512'
+options.kmeans = 512
 
 #Corss-validation options
-options.compute_subsets = 1
+options.compute_subsets = 0
 options.k_cv = 5
 
 # Detector options:
 options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
 #Dense sampling options
-options.detector_options.dense_sampling = 1
+options.detector_options.dense_sampling = 0
 # Maximum number of equally spaced keypoints (Grid size)
 options.detector_options.dense_sampling_max_nr_keypoints = 1500
 options.detector_options.dense_sampling_keypoint_step_size = 10
@@ -45,7 +46,7 @@ options.depth = 3
 options.file_descriptor = open('report.txt', 'w')
 options.save_plots = 1
 options.plot_name = 'test'
-options.file_name = 'test'
+options.file_name = 'test_pyramids'
 options.show_plots = 1
 
 #Compute or read the codebook
@@ -65,11 +66,14 @@ subsets_filenames = list(xrange(options.k_cv))
 subsets_labels = list(xrange(options.k_cv))
 # Loop over the subsets:
 for i in range(options.k_cv):
-    subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','r'))
-    subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','r'))
+    subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','rb'))
+    subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','rb'))
     
 # Create the detector object
 detector = create_detector(options.detector_options)
+
+if not options.spatial_pyramids:
+    options.depth = 1
 
 # Extract the features for all the subsets
 subset_visual_words = list(xrange(options.k_cv))
