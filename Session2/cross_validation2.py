@@ -33,14 +33,22 @@ options.k_cv = 5
 options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
 #Dense sampling options
-options.detector_options.dense_sampling = 0
+options.detector_options.dense_sampling = 1
 # Maximum number of equally spaced keypoints (Grid size)
 options.detector_options.dense_sampling_max_nr_keypoints = 1500
-options.detector_options.dense_sampling_keypoint_step_size = 10
-options.detector_options.dense_sampling_keypoint_radius = 5
+options.detector_options.dense_sampling_keypoint_step_size = 8
+options.detector_options.dense_sampling_keypoint_radius = 8
 #Spatial pyramids options
 options.spatial_pyramids = 1
-options.depth = 3
+options.depth = 2
+
+#SVM options
+options.SVM_options.kernel = 'histogramIntersection'
+options.SVM_options.C = 1
+options.SVM_options.sigma = 1
+options.SVM_options.degree = 3
+options.SVM_options.coef0 = 0
+options.SVM_options.probability = 1
 
 #Evaluation options
 options.file_descriptor = open('report.txt', 'w')
@@ -122,7 +130,6 @@ for i in range(options.k_cv):
     # Only if pass a valid file descriptor
     if options.file_descriptor != -1:
         options.plot_name = options.file_name + '_' + str(i)
-        predictions = clf.predict(validation_visual_words_scaled)
         target_names = ['class mountain', 'class inside_city', 'class Opencountry', 'class coast', 'class street', \
                     'class forest', 'class tallbuilding', 'class highway']
         options.file_descriptor.write(classification_report(validation_labels, predictions, target_names=target_names))

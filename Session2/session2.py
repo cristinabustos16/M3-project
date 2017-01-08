@@ -384,10 +384,9 @@ def train_classifier(X, L, SVM_options):
     elif(SVM_options.kernel == 'sigmoid'):
         clf = svm.SVC(kernel='sigmoid', C = SVM_options.C, coef0 = SVM_options.coef0, \
                 random_state = 1, probability = SVM_options.probability).fit(X, L)
-    elif(SVM_options.kernel == 'precomputed'):
-        kernelMatrix = histogramIntersection(X, X)
-        clf = svm.SVC(kernel='precomputed', C = SVM_options.C, coef0 = SVM_options.coef0, \
-                random_state = 1, probability = SVM_options.probability).fit(kernelMatrix, L)
+    elif(SVM_options.kernel == 'histogramIntersection'):
+        clf = svm.SVC(kernel=histogramIntersection, C = SVM_options.C, coef0 = SVM_options.coef0, \
+                random_state = 1, probability = SVM_options.probability).fit(X, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
@@ -499,8 +498,7 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
             print('precomputed')
             print('visual_words_scaled')
             print(visual_words_scaled.shape)
-            predictMatrix = histogramIntersection(visual_words_scaled, visual_words_train)
-            predictions = clf.predict(predictMatrix)
+            predictions = clf.predict(visual_words_scaled)
             accuracy = 100 * clf.score(visual_words_scaled, test_labels)
             print('accuracy'+accuracy)
         else:
@@ -595,14 +593,14 @@ def extract_visual_words(gray, detector, codebook, kmeans, detector_options):
 
 ##############################################################################
 def  histogramIntersection(M, N):
-    n_samples , n_features = M.shape
-    K_int = np.zeros(shape=(n_samples,n_samples),dtype=np.float)
+    m_samples , m_features = M.shape
+    n_samples , n_features = N.shape
+    K_int = np.zeros(shape=(m_samples,n_samples),dtype=np.float)
     #K_int = 0
-    for i in range(n_samples):
+    for i in range(m_samples):
         for j in range(n_samples):
             K_int[i][j] = np.sum(np.minimum(M[i],N[j]))
             
-
     return K_int
     
 #############################################################################
