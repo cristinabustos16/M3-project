@@ -2,6 +2,7 @@
 import cPickle
 import numpy as np
 import sys
+import time
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import label_binarize
 from session2 import general_options_class
@@ -15,7 +16,6 @@ from session2 import compute_and_save_confusion_matrix
 from session2 import compute_and_save_roc_curve
 from session2 import compute_and_save_precision_recall_curve
 from sklearn.metrics import classification_report
-
 
 # Select options:
 options = general_options_class()
@@ -56,6 +56,8 @@ options.save_plots = 1
 options.plot_name = 'test'
 options.file_name = 'test_kernel_'
 options.show_plots = 1
+
+start = time.time()
 
 #Compute or read the codebook
 if options.compute_codebook:
@@ -148,6 +150,8 @@ for i in range(options.k_cv):
         compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, options)
         
 options.file_descriptor.close()
+
+end = time.time()
        
 # Compute the mean and the standard deviation of the accuracies found:
 accuracy_mean = np.mean(accuracy)
@@ -161,6 +165,10 @@ fd = open(report_name, 'w')
 try:
     fd.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
     fd.write('\n' + 'Std accuracy: ' + str(accuracy_sd))
+    fd.write('\n' + 'Done in ' + str(end - start) + ' secs.')
 except OSError:
     sys.stdout.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
 fd.close()
+
+print 'Done in '+str(end-start)+' secs.'
+
