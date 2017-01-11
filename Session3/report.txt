@@ -1,0 +1,12 @@
+                    precision    recall  f1-score   support
+
+    class mountain       0.71      0.77      0.74       118
+ class inside_city       0.81      0.78      0.79       116
+ class Opencountry       0.91      0.97      0.94       101
+       class coast       0.92      0.89      0.91        76
+      class street       0.87      0.89      0.88        94
+      class forest       0.88      0.78      0.83       114
+class tallbuilding       0.82      0.78      0.79        80
+     class highway       0.91      0.93      0.92       108
+
+       avg / total       0.85      0.85      0.85       807
