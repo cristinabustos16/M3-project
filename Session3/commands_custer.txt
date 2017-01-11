@@ -1,0 +1,1 @@
+qsub -cwd -V -q fast.master.q@compute-0-2 -l mem.token=5M,mem_free=5M launch_test.py
