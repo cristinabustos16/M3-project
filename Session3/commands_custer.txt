@@ -1,1 +1,18 @@
 qsub -cwd -V -S /usr/bin/python -q fast.master.q@compute-0-2 -l mem_token=500M,mem_free=500M launch_test.py
+
+
+#Compile Yael library
+
+./configure.sh --enable-numpy
+make clean 
+make
+
+#change the python path to the virtual environment python path (/home/1242538/virtualenvs/mlcv/bin/python) in makefile.inc
+
+#Bash:
+export YAELROOT=/home/1242538/yael_v438 (path to the yael directory)
+export PYTHONPATH=$PATH:$YAELROOT
+export LD_LIBRARY_PATH=/usr/local/lib
+
+#launch test:
+qsub -cwd -V -S /home/1242538/virtualenvs/mlcv/bin/python -q fast.master.q@compute-0-2 -l mem_token=500M,mem_free=500M launch_test.py
