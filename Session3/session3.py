@@ -35,9 +35,6 @@ def main(options):
     
     # Create the detector object
     detector = create_detector(options.detector_options)
-    
-    if not options.spatial_pyramids:
-        options.depth = 1
         
     clf, stdSlr_VW = train_system(train_images_filenames, train_labels, detector, \
                                     codebook, options)
@@ -79,9 +76,6 @@ def train_and_validate(options):
         
     # Create the detector object
     detector = create_detector(options.detector_options)
-    
-    if not options.spatial_pyramids:
-        options.depth = 1
     
     # Extract the features for all the subsets
     subset_visual_words = list(xrange(options.k_cv))
@@ -320,7 +314,16 @@ def extract_visual_words_all(images_filenames, detector, codebook, options):
     nimages = len(images_filenames)
     
     if options.spatial_pyramids:
-        nhistsperlevel = [4**l for l in range(options.depth)]
+        if options.spatial_pyramids_conf == '2x2':
+            nhistsperlevel = [4**l for l in range(options.spatial_pyramids_depth)]
+        elif options.spatial_pyramids_conf == '1x2':
+            nhistsperlevel = [2**l for l in range(options.spatial_pyramids_depth)]
+        elif options.spatial_pyramids_conf == '1x3':
+            nhistsperlevel = [3**l for l in range(options.spatial_pyramids_depth)]
+        else:
+            print 'Configuratin of spatial pyramid not recognized.'
+            sys.stdout.flush()
+            sys.exit()
         nwords = sum(nhistsperlevel) * options.kmeans
     else:
         nwords = options.kmeans
@@ -367,19 +370,39 @@ def spatial_pyramid(gray, detector, codebook, options):
     
     visual_words = []
     
-    for level in range(options.depth):
-        deltai = height / (2**level)
-        deltaj = width / (2**level)
-        for i in range(2**level):
-            for j in range(2**level):
-                im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
+    if(options.spatial_pyramids_conf == '2x2'):
+        for level in range(options.spatial_pyramids_depth):
+            deltai = height / (2**level)
+            deltaj = width / (2**level)
+            for i in range(2**level):
+                for j in range(2**level):
+                    im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
+                    visual_words_im = extract_visual_words_one(im, detector, codebook, \
+                            options.kmeans, options.detector_options)
+                    visual_words.extend(visual_words_im)
+                    
+    elif(options.spatial_pyramids_conf == '1x2'):
+        for level in range(options.spatial_pyramids_depth):
+            deltai = height / (2**level)
+            for i in range(2**level):
+                im = gray[i*deltai : (i+1)*deltai, :]
                 visual_words_im = extract_visual_words_one(im, detector, codebook, \
                         options.kmeans, options.detector_options)
-#                if level == 2:
-#                    visual_words_im = 1/2 * visual_words_im
-#                else:
-#                    visual_words_im = 1/4 * visual_words_im
                 visual_words.extend(visual_words_im)
+                    
+    elif(options.spatial_pyramids_conf == '1x3'):
+        for level in range(options.spatial_pyramids_depth):
+            deltai = height / (3**level)
+            for i in range(3**level):
+                im = gray[i*deltai : (i+1)*deltai, :]
+                visual_words_im = extract_visual_words_one(im, detector, codebook, \
+                        options.kmeans, options.detector_options)
+                visual_words.extend(visual_words_im)
+        
+    else:
+        print 'Configuratin of spatial pyramid not recognized.'
+        sys.stdout.flush()
+        sys.exit()
                 
     return visual_words
     
@@ -665,7 +688,7 @@ class general_options_class:
     compute_codebook = 1 # Compute or read the codebook.
     fname_codebook = 'codebook512' # In case of reading the codebook, specify here the name of the file.
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
-    depth = 3 # Number of levels of the spatial pyramid.
+    spatial_pyramids_depth = 3 # Number of levels of the spatial pyramid.
     spatial_pyramids_conf = '2x2' # Spatial pyramid configuracion ('2x2', '3x1', '2x1')
     file_name = 'test'
     show_plots = 0

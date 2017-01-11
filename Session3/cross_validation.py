@@ -27,7 +27,8 @@ options.detector_options.dense_sampling_keypoint_radius = 8
 
 # Spatial pyramids options
 options.spatial_pyramids = 0
-options.depth = 3
+options.spatial_pyramids_depth = 3
+options.spatial_pyramids_conf = '1x2'
 
 # SVM options
 options.SVM_options.kernel = 'linear'
