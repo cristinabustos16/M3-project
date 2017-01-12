@@ -653,18 +653,9 @@ def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, 
                                     options, plot_name):
     # Compute ROC curve and ROC area for each class
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
-    
-    print classes    
-    
-    labels2 = np.empty(binary_labels.shape[0])
-    for i in range(binary_labels.shape[0]):
-        for j in range(binary_labels.shape[1]):
-            if binary_labels[i,j] == 1:
-                labels2[i] = j
-    
     plt.figure()
     for i, color in zip(range(classes.__len__()), colors):
-        fpr, tpr, thresholds = roc_curve(labels2, predicted_probabilities[:,i], pos_label = i)
+        fpr, tpr, thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
         roc_auc = auc(fpr, tpr)
         plt.plot(fpr, tpr, lw=2, color=color,
              label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc))
@@ -811,17 +802,17 @@ def final_issues(test_visual_words_scaled, test_labels, clf, options):
 
     # Compute probabilities:
     predicted_probabilities = clf.predict_proba(test_visual_words_scaled)
-    predicted_score = clf.decision_function(test_visual_words_scaled)
+    # predicted_score = clf.decision_function(test_visual_words_scaled)
     
     # Binarize the labels
-    binary_labels = label_binarize(test_labels, classes=classes)
-    
+    binary_labels = label_binarize(test_labels, classes=clf.classes_)
+
     # Compute ROC curve and ROC area for each class
-    compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, \
+    compute_and_save_roc_curve(binary_labels, predicted_probabilities, clf.classes_, \
                                             options, plot_name)
     
     # Compute Precision-Recall curve for each class
-    compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, \
+    compute_and_save_precision_recall_curve(binary_labels, predicted_probabilities, clf.classes_, \
                                             options, plot_name)
         
         
