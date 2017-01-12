@@ -25,10 +25,10 @@ def main(options):
     start = time.time()
     
     # Read the train and test files
-    train_images_filenames = cPickle.load(open('train_images_filenames.dat','r'))
-    test_images_filenames = cPickle.load(open('test_images_filenames.dat','r'))
-    train_labels = cPickle.load(open('train_labels.dat','r'))
-    test_labels = cPickle.load(open('test_labels.dat','r'))
+    train_images_filenames, \
+        test_images_filenames, \
+        train_labels, \
+        test_labels = read_dataset(options)
     
     print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
     print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
@@ -223,6 +223,48 @@ def train_and_validate_slow(options):
     fd.close()
     
     return accuracy_mean, accuracy_sd, running_time
+
+
+##############################################################################
+def read_dataset(options):
+    # Read the names of the files.
+    # It is possible to select only a part of these files, for faster computation
+    # when checking if the code works properly.
+    
+    # Read the train and test files
+    train_images_filenames = cPickle.load(open('train_images_filenames.dat','r'))
+    test_images_filenames = cPickle.load(open('test_images_filenames.dat','r'))
+    train_labels = cPickle.load(open('train_labels.dat','r'))
+    test_labels = cPickle.load(open('test_labels.dat','r'))
+    
+    if options.reduce_dataset:
+        # Select randomly only a percentage of the images.        
+        
+        # Reduce the train set:
+        ntrain = len(train_labels)
+        nreduced = int(round(options.percent_reduced_dataset * ntrain / 100))
+        train_shuffled = np.random.choice(range(ntrain), nreduced, replace = False)
+        aux1_list = []
+        aux2_list = []
+        for i in range(nreduced):
+            aux1_list.append(train_images_filenames[train_shuffled[i]])
+            aux2_list.append(train_labels[train_shuffled[i]])
+        train_images_filenames = aux1_list
+        train_labels = aux2_list
+        
+        # Reduce the test set:
+        ntest = len(test_labels)
+        nreduced = int(round(options.percent_reduced_dataset * ntest / 100))
+        test_shuffled = np.random.choice(range(ntest), nreduced, replace = False)
+        aux1_list = []
+        aux2_list = []
+        for i in range(nreduced):
+            aux1_list.append(test_images_filenames[test_shuffled[i]])
+            aux2_list.append(test_labels[test_shuffled[i]])
+        test_images_filenames = aux1_list
+        test_labels = aux2_list
+    
+    return train_images_filenames, test_images_filenames, train_labels, test_labels
 
 
 ##############################################################################
@@ -611,9 +653,18 @@ def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, 
                                     options, plot_name):
     # Compute ROC curve and ROC area for each class
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
+    
+    print classes    
+    
+    labels2 = np.empty(binary_labels.shape[0])
+    for i in range(binary_labels.shape[0]):
+        for j in range(binary_labels.shape[1]):
+            if binary_labels[i,j] == 1:
+                labels2[i] = j
+    
     plt.figure()
     for i, color in zip(range(classes.__len__()), colors):
-        fpr, tpr, thresholds = roc_curve(binary_labels[:, i], predicted_probabilities[:, i])
+        fpr, tpr, thresholds = roc_curve(labels2, predicted_probabilities[:,i], pos_label = i)
         roc_auc = auc(fpr, tpr)
         plt.plot(fpr, tpr, lw=2, color=color,
              label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc))
@@ -747,15 +798,12 @@ def final_issues(test_visual_words_scaled, test_labels, clf, options):
     predictions = clf.predict(test_visual_words_scaled)
     
     plot_name = options.file_name + '_test'
-    target_names = ['class mountain', 'class inside_city', 'class Opencountry', \
-                    'class coast', 'class street', 'class forest', \
-                    'class tallbuilding', 'class highway']
-    classes = ['mountain', 'inside_city', 'Opencountry', 'coast', 'street', \
-                    'forest', 'tallbuilding', 'highway']
+
+    classes = clf.classes_
                 
     # Report file:
     fid = open('report.txt', 'w')
-    fid.write(classification_report(test_labels, predictions, target_names=target_names))
+    fid.write(classification_report(test_labels, predictions, target_names=classes))
     fid.close()
     
     # Confussion matrix:
@@ -841,3 +889,5 @@ class general_options_class:
     save_plots = 0
     compute_evaluation = 0 # Compute the ROC, confusion matrix, and write report.
     classifier = 'svm' # Type of classifier ('svm', 'rf' for Random Forest, 'adaboost')
+    reduce_dataset = 0 # Consider only a part of the dataset. Useful for fast computation and checking code errors.
+    percent_reduced_dataset = 10 # Percentage of the dataset to consider.

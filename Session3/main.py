@@ -27,7 +27,7 @@ options.spatial_pyramids_depth = 2
 options.spatial_pyramids_conf = '1x3'
 
 # Select classifier:
-options.classifier = 'adaboost'
+options.classifier = 'svm'
 
 # SVM options:
 options.SVM_options.kernel = 'linear'
@@ -42,10 +42,13 @@ options.SVM_options.probability = 1
 # Adaboost options:
 
 # Evaluation options:
-options.compute_evaluation = 0
+options.compute_evaluation = 1
 options.save_plots = 0
 options.file_name = 'test_kernel_'
 options.show_plots = 1
+
+# Reduce dataset?
+options.reduce_dataset = 0
 
 
 #######################################################
