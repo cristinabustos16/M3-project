@@ -15,6 +15,9 @@ from sklearn.preprocessing import label_binarize
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import AdaBoostClassifier
 
 
 ##############################################################################
@@ -125,7 +128,90 @@ def train_and_validate(options):
     running_time = end-start
     print 'Done in '+str(running_time)+' secs.'
     
-    # Write the results in a text file
+    # Write the results in a text file:
+    report_name = 'report_' + options.file_name + '.txt'
+    fd = open(report_name, 'w')
+    try:
+        fd.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
+        fd.write('\n' + 'Std. dev. accuracy: ' + str(accuracy_sd))
+        fd.write('\n' + 'Done in ' + str(end - start) + ' secs.')
+    except OSError:
+        sys.stdout.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
+    fd.close()
+    
+    return accuracy_mean, accuracy_sd, running_time
+
+
+##############################################################################
+def train_and_validate_slow(options):
+    start = time.time()
+
+    # Compute or read the codebook
+    if options.compute_codebook:
+        codebook = compute_and_write_codebook(options)
+    else:
+        codebook = read_codebook(options.fname_codebook)
+        
+    # Create the cross-validation subsets
+    if options.compute_subsets:
+        create_subsets_cross_validation(options.k_cv)
+        
+    # Read the subsets:
+    # We create a list where the element i is another list with all the file
+    # names belonging to subset i. The same for the labels of the images.
+    subsets_filenames = list(xrange(options.k_cv))
+    subsets_labels = list(xrange(options.k_cv))
+    # Loop over the subsets:
+    for i in range(options.k_cv):
+        subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','rb'))
+        subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','rb'))
+        
+    # Create the detector object
+    detector = create_detector(options.detector_options)
+    
+    # Initialize vector to store the accuracy of each training.
+    accuracy = np.zeros(options.k_cv)
+    
+    # Train and evaluate k times:
+    for i in range(options.k_cv):
+        # First, we create a list with the names of the files we will use for
+        # training. These are the files in all the subsets except the i-th one.
+        # The same for the labels.
+        # Initialize:
+        trainset_images_filenames = []
+        trainset_labels = []
+        for j in range(options.k_cv):
+            if(i != j): # If it is not the i-th subset, add it to our trainset.
+                trainset_images_filenames.extend(subsets_filenames[j])
+                trainset_labels.extend(subsets_labels[j])
+        # For validation, we will use the rest of the images, i.e., the
+        # subset i.
+        validation_images_filenames = subsets_filenames[i]
+        validation_labels = subsets_labels[i]
+    
+        # The rest is exactly the same as a normal training-testing: we train
+        # with the train set we have just built, and test with the evaluation
+        # set.
+        
+        # Train system:
+        clf, stdSlr_VW = train_system(trainset_images_filenames, trainset_labels, \
+                                            detector, codebook, options)
+    
+        # Evaluate system:
+        accuracy[i] = test_system(validation_images_filenames, validation_labels, \
+                                        detector, codebook, clf, stdSlr_VW, options)
+    
+    # Compute the mean and the standard deviation of the accuracies found:
+    accuracy_mean = np.mean(accuracy)
+    print('Mean accuracy: ' + str(accuracy_mean))
+    accuracy_sd = np.std(accuracy, ddof = 1)
+    print('Std. dev. accuracy: ' + str(accuracy_sd))
+    
+    end = time.time()
+    running_time = end-start
+    print 'Done in '+str(running_time)+' secs.'
+    
+    # Write the results in a text file:
     report_name = 'report_' + options.file_name + '.txt'
     fd = open(report_name, 'w')
     try:
@@ -421,8 +507,48 @@ def histogramIntersection(M, N):
 
 
 ##############################################################################
-def train_classifier(X, L, SVM_options):
-# Train the classifier, given some options and the training data.
+def train_classifier(X, L, options):
+# Select the classifier for training.
+    if(options.classifier == 'svm'):
+        clf = train_SVM(X, L, options.SVM_options)
+    elif(options.classifier == 'rf'):
+        clf = train_randomforest(X, L, options.rf_options)
+    elif(options.classifier == 'adaboost'):
+        clf = train_adaboost(X, L, options.adaboost_options)
+    else:
+        print 'SVM kernel not recognized!'
+    return clf
+
+
+##############################################################################
+def train_randomforest(X, L, rf_options):
+# Train the Random Forest, given some options and the training data.
+    print 'Training the Random Forest classifier...'
+    sys.stdout.flush()
+    clf = RandomForestClassifier(n_estimators = rf_options.n_estimators, \
+                                    max_features = rf_options.max_features, \
+                                    max_depth = rf_options.max_depth, \
+                                    min_samples_split = rf_options.min_samples_split, \
+                                    min_samples_leaf = rf_options.min_samples_leaf).fit(X, L)
+    print 'Done!'
+    return clf
+
+
+##############################################################################
+def train_adaboost(X, L, adaboost_options):
+# Train the Adaboost classifier, given some options and the training data.
+    print 'Training the Adaboost classifier...'
+    sys.stdout.flush()
+    clf = AdaBoostClassifier(base_estimator = adaboost_options.base_estimator, \
+                                n_estimators = adaboost_options.n_estimators, \
+                                learning_rate = adaboost_options.learning_rate).fit(X, L)
+    print 'Done!'
+    return clf
+
+
+##############################################################################
+def train_SVM(X, L, SVM_options):
+# Train the SVM, given some options and the training data.
     print 'Training the SVM classifier...'
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
@@ -444,7 +570,7 @@ def train_classifier(X, L, SVM_options):
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
-    return clf 
+    return clf
     
     
 #############################################################################
@@ -553,7 +679,7 @@ def train_system(train_images_filenames, train_labels, detector, codebook, optio
     train_visual_words_scaled = stdSlr_VW.transform(train_visual_words)
     
     # Train the classifier:
-    clf = train_classifier(train_visual_words_scaled, train_labels, options.SVM_options)
+    clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
     return clf, stdSlr_VW
 
@@ -569,7 +695,7 @@ def train_system_nocompute(train_visual_words, train_labels, detector, codebook,
     train_visual_words_scaled = stdSlr_VW.transform(train_visual_words)
     
     # Train the classifier:
-    clf = train_classifier(train_visual_words_scaled, train_labels, options.SVM_options)
+    clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
     return clf, stdSlr_VW
     
@@ -660,6 +786,24 @@ class SVM_options_class:
     degree = 3
     coef0 = 0
     probability = 1 # This changes the way we aggregate predictions. Necessary for ROC.
+        
+        
+##############################################################################
+class random_forest_options_class:
+# Options for Random Forest classifier.
+    n_estimators = 10
+    max_features = 'auto'
+    max_depth = None
+    min_samples_split = 2
+    min_samples_leaf = 1
+        
+        
+##############################################################################
+class adaboost_options_class:
+# Options for Random Forest classifier.
+    base_estimator = DecisionTreeClassifier
+    n_estimators = 50
+    learning_rate = 1.
     
 
 ##############################################################################
@@ -678,6 +822,8 @@ class detector_options_class:
 class general_options_class:
 # General options for the system.
     SVM_options = SVM_options_class()
+    rf_options = random_forest_options_class()
+    adaboost_options = adaboost_options_class()
     detector_options = detector_options_class()
     ncomp_pca = 30 # Number of components for PCA.
     scale_kmeans = 0 # Scale features before applying k-means.
@@ -693,4 +839,5 @@ class general_options_class:
     file_name = 'test'
     show_plots = 0
     save_plots = 0
-    compute_evaluation = 0
+    compute_evaluation = 0 # Compute the ROC, confusion matrix, and write report.
+    classifier = 'svm' # Type of classifier ('svm', 'rf' for Random Forest, 'adaboost')
