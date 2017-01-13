@@ -57,13 +57,13 @@ def main(options):
 def train_and_validate(options):
     start = time.time()
 
-    # Compute or read the codebook
+    # Compute or read the codebook:
     if options.compute_codebook:
         codebook = compute_and_write_codebook(options)
     else:
         codebook = read_codebook(options.fname_codebook)
         
-    # Create the cross-validation subsets
+    # Create the cross-validation subsets:
     if options.compute_subsets:
         create_subsets_cross_validation(options.k_cv)
         
@@ -145,14 +145,8 @@ def train_and_validate(options):
 ##############################################################################
 def train_and_validate_slow(options):
     start = time.time()
-
-    # Compute or read the codebook
-    if options.compute_codebook:
-        codebook = compute_and_write_codebook(options)
-    else:
-        codebook = read_codebook(options.fname_codebook)
         
-    # Create the cross-validation subsets
+    # Create the cross-validation subsets:
     if options.compute_subsets:
         create_subsets_cross_validation(options.k_cv)
         
@@ -192,6 +186,12 @@ def train_and_validate_slow(options):
         # The rest is exactly the same as a normal training-testing: we train
         # with the train set we have just built, and test with the evaluation
         # set.
+
+        # Compute or read the codebook:
+        if options.compute_codebook:
+            codebook = compute_and_write_codebook(options)
+        else:
+            codebook = read_codebook(options.fname_codebook)
         
         # Train system:
         clf, stdSlr_VW = train_system(trainset_images_filenames, trainset_labels, \
@@ -471,6 +471,8 @@ def extract_visual_words_all(images_filenames, detector, codebook, options):
     
 ##############################################################################
 def extract_visual_words_one(gray, detector, codebook, kmeans, detector_options):
+    
+    # Extract visual features:
     if detector_options.dense_sampling == 1:
         kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, \
                     detector_options.dense_sampling_keypoint_step_size, \
@@ -478,12 +480,19 @@ def extract_visual_words_one(gray, detector, codebook, kmeans, detector_options)
                     gray.shape[1])
         kpt, des = detector.compute(gray, kpt)
         #descriptors_per_image[i] = kpt.__len__()
+        
     else:
         kpt, des = detector.detectAndCompute(gray,None)
     
     if not kpt:
         words = []
+        
     else:
+        # Scale:
+    
+        # Apply PCA:
+        
+        # From features to words:
         words=codebook.predict(des)
         
     visual_words = np.bincount(words,minlength=kmeans)
@@ -654,17 +663,9 @@ def compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, 
     # Compute ROC curve and ROC area for each class
     colors = cycle(['cyan', 'indigo', 'seagreen', 'yellow', 'blue', 'darkorange', 'black', 'red'])
     
-    print classes    
-    
-    labels2 = np.empty(binary_labels.shape[0])
-    for i in range(binary_labels.shape[0]):
-        for j in range(binary_labels.shape[1]):
-            if binary_labels[i,j] == 1:
-                labels2[i] = j
-    
     plt.figure()
     for i, color in zip(range(classes.__len__()), colors):
-        fpr, tpr, thresholds = roc_curve(labels2, predicted_probabilities[:,i], pos_label = i)
+        fpr, tpr, thresholds = roc_curve(binary_labels[:,i], predicted_probabilities[:,i])
         roc_auc = auc(fpr, tpr)
         plt.plot(fpr, tpr, lw=2, color=color,
              label='Label \'%s\' (AUC = %0.2f)' % (classes[i], roc_auc))
@@ -718,6 +719,13 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, \
 ##############################################################################
 def train_system(train_images_filenames, train_labels, detector, codebook, options):
     # Train the system with the training data.
+
+    # Fit the scaler for features:
+    if options.scale_features == 1:
+        
+
+    # Apply PCA to features:
+    if options.apply_pca == 1:
     
     # Extract the visual words from the train images:
     train_visual_words = extract_visual_words_all(train_images_filenames, \
@@ -874,7 +882,7 @@ class general_options_class:
     adaboost_options = adaboost_options_class()
     detector_options = detector_options_class()
     ncomp_pca = 30 # Number of components for PCA.
-    scale_kmeans = 0 # Scale features before applying k-means.
+    scale_features = 0 # Scale features before applying k-means.
     apply_pca = 0 # Apply, or not, PCA.
     kmeans = 512 # Number of clusters for k-means (codebook).
     compute_subsets = 1 # Compute or not the cross-validation subsets
