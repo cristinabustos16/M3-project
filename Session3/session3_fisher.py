@@ -284,8 +284,6 @@ def train_system(train_filenames, train_labels, detector, options):
 
     if options.apply_pca:
         D, pca = applyPCA(D, options)
-    if options.apply_normalization:
-        D = applyNormalization(D, options)
     
     print 'Computing gmm with '+str(options.kmeans)+' centroids'
     init=time.time()
@@ -299,6 +297,9 @@ def train_system(train_filenames, train_labels, detector, options):
         fisher[i,:]= ynumpy.fisher(gmm, Train_descriptors[i], include = ['mu','sigma'])
     end=time.time()
     print 'Done in '+str(end-init)+' secs.'
+    
+    if options.apply_normalization:
+        fisher = applyNormalization(fisher, options)
     
     # Train a linear SVM classifier
     stdSlr = StandardScaler().fit(fisher)
@@ -318,11 +319,14 @@ def test_system(test_filenames, test_labels, detector, pca, gmm, stdSlr, clf, op
         ima=cv2.imread(filename)
         gray=cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
         kpt,des=detector.detectAndCompute(gray,None)
+        
         if options.apply_pca:
             des = pca.transform(des)
-        if options.apply_normalization:
-            des = applyNormalization(des,options)
+        
         fisher_test[i,:]=ynumpy.fisher(gmm, des, include = ['mu','sigma'])
+        
+        if options.apply_normalization:
+            fisher_test = applyNormalization(fisher_test,options)
         
     test_fisher_vectors_scaled = stdSlr.transform(fisher_test)
     accuracy = 100*clf.score(test_fisher_vectors_scaled, test_labels)
