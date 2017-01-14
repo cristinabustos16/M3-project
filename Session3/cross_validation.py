@@ -45,12 +45,22 @@ options.SVM_options.probability = 1
 # Evaluation options:
 options.compute_evaluation = 0
 
+# PCA and scaling:
+scale_features = 1
+apply_pca = 1
+ncomp_pca = 20
+
+# Fast or slow cross-validation.
+options.fast_cross_validation = 0
+
 
 #######################################################
 
 # Call the cross-validation program:
-#accuracy_mean, accuracy_sd, running_time = train_and_validate(options)
-accuracy_mean, accuracy_sd, running_time = train_and_validate_slow(options)
+if options.fast_cross_validation == 1:
+    accuracy_mean, accuracy_sd, running_time = train_and_validate(options)
+else:
+    accuracy_mean, accuracy_sd, running_time = train_and_validate_slow(options)
 
 
 

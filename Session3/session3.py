@@ -9,8 +9,9 @@ import sys
 from sklearn.metrics import confusion_matrix
 import itertools
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc
 from itertools import cycle
+from sklearn.decomposition import PCA
+from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_curve
@@ -56,6 +57,11 @@ def main(options):
 ##############################################################################
 def train_and_validate(options):
     start = time.time()
+    
+    if options.apply_pca == 1 or options.scale_features == 1:
+        print 'Error: Not possible to use fast cross-validation with scaling or PCA'
+        sys.stdout.flush()
+        sys.exit()
 
     # Compute or read the codebook:
     if options.compute_codebook:
@@ -436,7 +442,8 @@ def read_and_extract_features(images_filenames, detector, detector_options):
     
 
 ##############################################################################
-def extract_visual_words_all(images_filenames, detector, codebook, options):
+def extract_visual_words_all(images_filenames, detector, codebook, options, \
+                                    stdSlr_kmeans, pca):
     # extract keypoints and descriptors
     # store descriptors in a python list of numpy arrays
     nimages = len(images_filenames)
@@ -463,20 +470,22 @@ def extract_visual_words_all(images_filenames, detector, codebook, options):
         ima = cv2.imread(filename)
         gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
         if options.spatial_pyramids:
-            visual_words[i,:] = spatial_pyramid(gray, detector, codebook, options)
+            visual_words[i,:] = spatial_pyramid(gray, detector, codebook, \
+                                    options, stdSlr_kmeans, pca)
         else:
-            visual_words[i,:] = extract_visual_words_one(gray, detector, codebook, options.kmeans, options.detector_options)
+            visual_words[i,:] = extract_visual_words_one(gray, detector, \
+                                    codebook, options, stdSlr_kmeans, pca)
     return visual_words
     
     
 ##############################################################################
-def extract_visual_words_one(gray, detector, codebook, kmeans, detector_options):
+def extract_visual_words_one(gray, detector, codebook, options, stdSlr_kmeans, pca):
     
     # Extract visual features:
-    if detector_options.dense_sampling == 1:
-        kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, \
-                    detector_options.dense_sampling_keypoint_step_size, \
-                    detector_options.dense_sampling_keypoint_radius, gray.shape[0], \
+    if options.detector_options.dense_sampling == 1:
+        kpt = dense_sampling(options.detector_options.dense_sampling_max_nr_keypoints, \
+                    options.detector_options.dense_sampling_keypoint_step_size, \
+                    options.detector_options.dense_sampling_keypoint_radius, gray.shape[0], \
                     gray.shape[1])
         kpt, des = detector.compute(gray, kpt)
         #descriptors_per_image[i] = kpt.__len__()
@@ -488,20 +497,19 @@ def extract_visual_words_one(gray, detector, codebook, kmeans, detector_options)
         words = []
         
     else:
-        # Scale:
-    
-        # Apply PCA:
+        # Scale and apply PCA, if indicated to do so.
+        des = preprocess_apply(des, stdSlr_kmeans, pca, options)
         
         # From features to words:
         words=codebook.predict(des)
         
-    visual_words = np.bincount(words,minlength=kmeans)
+    visual_words = np.bincount(words,minlength=options.kmeans)
     
     return visual_words
     
 
 ##############################################################################
-def spatial_pyramid(gray, detector, codebook, options):
+def spatial_pyramid(gray, detector, codebook, options, stdSlr_kmeans, pca):
     
     height, width = gray.shape
     
@@ -515,7 +523,7 @@ def spatial_pyramid(gray, detector, codebook, options):
                 for j in range(2**level):
                     im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
                     visual_words_im = extract_visual_words_one(im, detector, codebook, \
-                            options.kmeans, options.detector_options)
+                            options.kmeans, options.detector_options, stdSlr_kmeans, pca)
                     visual_words.extend(visual_words_im)
                     
     elif(options.spatial_pyramids_conf == '1x2'):
@@ -524,7 +532,7 @@ def spatial_pyramid(gray, detector, codebook, options):
             for i in range(2**level):
                 im = gray[i*deltai : (i+1)*deltai, :]
                 visual_words_im = extract_visual_words_one(im, detector, codebook, \
-                        options.kmeans, options.detector_options)
+                        options.kmeans, options.detector_options, stdSlr_kmeans, pca)
                 visual_words.extend(visual_words_im)
                     
     elif(options.spatial_pyramids_conf == '1x3'):
@@ -533,7 +541,7 @@ def spatial_pyramid(gray, detector, codebook, options):
             for i in range(3**level):
                 im = gray[i*deltai : (i+1)*deltai, :]
                 visual_words_im = extract_visual_words_one(im, detector, codebook, \
-                        options.kmeans, options.detector_options)
+                        options.kmeans, options.detector_options, stdSlr_kmeans, pca)
                 visual_words.extend(visual_words_im)
         
     else:
@@ -714,22 +722,50 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, \
         plt.savefig(file_name, bbox_inches='tight')
     if options.show_plots:
         plt.show()
+    
+    
+##############################################################################
+def preprocess_fit(train_images_filenames, detector, options):
+    # Fit the scaler and the PCA with the training features.
+
+    # Extract features from train images:
+    D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
+                detector, options.detector_options)
+    # Create and fit the scaler and the PCA:
+    stdSlr_kmeans = StandardScaler()
+    if(options.scale_kmeans == 1):
+        stdSlr_kmeans = StandardScaler().fit(D)
+    pca = PCA(n_components = options.ncomp_pca)
+    if(options.apply_pca == 1):
+        print "Fitting principal components analysis..."
+        pca.fit(D)
+        print "Explained variance with ", options.ncomp_pca , \
+            " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
+    return stdSlr_kmeans, pca
+    
+    
+##############################################################################
+def preprocess_apply(D, stdSlr_kmeans, pca, options):
+    # Scale and apply PCA to features.
+    if(options.scale_kmeans == 1):
+        D = stdSlr_kmeans.transform(D)
+    if(options.apply_pca == 1):
+        D = pca.transform(D)
+    return D
 
 
 ##############################################################################
 def train_system(train_images_filenames, train_labels, detector, codebook, options):
     # Train the system with the training data.
 
-    # Fit the scaler for features:
-    if options.scale_features == 1:
-        
-
-    # Apply PCA to features:
-    if options.apply_pca == 1:
+    # Fit the scaler and the PCA, if indicated to do so.
+    # This process takes time, since it will extract the features of all
+    # the images.
+    stdSlr_kmeans, pca = preprocess_fit(train_images_filenames, detector, options)
     
     # Extract the visual words from the train images:
     train_visual_words = extract_visual_words_all(train_images_filenames, \
-                                                detector, codebook, options)
+                                detector, codebook, options, stdSlr_kmeans, pca)
     
     # Fit scaler for words:
     stdSlr_VW = StandardScaler().fit(train_visual_words)
@@ -899,3 +935,4 @@ class general_options_class:
     classifier = 'svm' # Type of classifier ('svm', 'rf' for Random Forest, 'adaboost')
     reduce_dataset = 0 # Consider only a part of the dataset. Useful for fast computation and checking code errors.
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
+    fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
