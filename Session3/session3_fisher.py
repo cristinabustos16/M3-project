@@ -682,3 +682,4 @@ class general_options_class:
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
     apply_normalization = 1
     normalization = 'power'
+    evaluation_measures = 0
