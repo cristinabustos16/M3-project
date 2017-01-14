@@ -753,7 +753,6 @@ def preprocess_and_codebook(train_images_filenames, detector, options):
             codebook = compute_codebook(options)
         else:
             codebook = read_codebook(options)
-
     
     return codebook, stdSlr_features, pca
     
@@ -761,7 +760,6 @@ def preprocess_and_codebook(train_images_filenames, detector, options):
 ##############################################################################
 def preprocess_fit(D, options):
     # Fit the scaler and the PCA with the training features.
-    # Create and fit the scaler and the PCA:
     stdSlr_features = StandardScaler()
     if(options.scale_features == 1):
         stdSlr_features = StandardScaler().fit(D)

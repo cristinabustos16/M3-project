@@ -7,16 +7,16 @@ from session3 import train_and_validate_slow
 options = general_options_class()
 
 # Fast or slow cross-validation.
-options.fast_cross_validation = 1
+options.fast_cross_validation = 0
 
 # Codebook options:
-options.compute_codebook = 0
+options.compute_codebook = 1
 options.kmeans = 512
 
 # PCA and scaling:
-options.scale_features = 0
-options.apply_pca = 0
-options.ncomp_pca = 20
+options.scale_features = 1
+options.apply_pca = 1
+options.ncomp_pca = 60
 
 # Cross-validation options:
 options.compute_subsets = 0
@@ -34,7 +34,7 @@ options.detector_options.dense_sampling_keypoint_step_size = 8
 options.detector_options.dense_sampling_keypoint_radius = 8
 
 # Spatial pyramids options:
-options.spatial_pyramids = 0
+options.spatial_pyramids = 1
 options.spatial_pyramids_depth = 2
 options.spatial_pyramids_conf = '3x1'
 
