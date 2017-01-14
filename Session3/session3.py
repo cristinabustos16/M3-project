@@ -884,17 +884,17 @@ def final_issues(test_visual_words_scaled, test_labels, clf, options):
 
     # Compute probabilities:
     predicted_probabilities = clf.predict_proba(test_visual_words_scaled)
-    predicted_score = clf.decision_function(test_visual_words_scaled)
+    # predicted_score = clf.decision_function(test_visual_words_scaled)
     
     # Binarize the labels
-    binary_labels = label_binarize(test_labels, classes=classes)
-    
+    binary_labels = label_binarize(test_labels, classes=clf.classes_)
+
     # Compute ROC curve and ROC area for each class
-    compute_and_save_roc_curve(binary_labels, predicted_probabilities, classes, \
+    compute_and_save_roc_curve(binary_labels, predicted_probabilities, clf.classes_, \
                                             options, plot_name)
     
     # Compute Precision-Recall curve for each class
-    compute_and_save_precision_recall_curve(binary_labels, predicted_score, classes, \
+    compute_and_save_precision_recall_curve(binary_labels, predicted_probabilities, clf.classes_, \
                                             options, plot_name)
         
         
