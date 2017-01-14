@@ -6,10 +6,17 @@ from session3 import train_and_validate_slow
 # Select options:
 options = general_options_class()
 
+# Fast or slow cross-validation.
+options.fast_cross_validation = 1
+
 # Codebook options:
 options.compute_codebook = 0
-options.fname_codebook = 'codebook512'
 options.kmeans = 512
+
+# PCA and scaling:
+options.scale_features = 0
+options.apply_pca = 0
+options.ncomp_pca = 20
 
 # Cross-validation options:
 options.compute_subsets = 0
@@ -20,7 +27,7 @@ options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
 
 # Dense sampling options:
-options.detector_options.dense_sampling = 0
+options.detector_options.dense_sampling = 1
 # Maximum number of equally spaced keypoints (Grid size)
 options.detector_options.dense_sampling_max_nr_keypoints = 1500
 options.detector_options.dense_sampling_keypoint_step_size = 8
@@ -29,7 +36,7 @@ options.detector_options.dense_sampling_keypoint_radius = 8
 # Spatial pyramids options:
 options.spatial_pyramids = 0
 options.spatial_pyramids_depth = 2
-options.spatial_pyramids_conf = '1x3'
+options.spatial_pyramids_conf = '3x1'
 
 # Select classifier:
 options.classifier = 'svm'
@@ -44,14 +51,6 @@ options.SVM_options.probability = 1
 
 # Evaluation options:
 options.compute_evaluation = 0
-
-# PCA and scaling:
-scale_features = 1
-apply_pca = 1
-ncomp_pca = 20
-
-# Fast or slow cross-validation.
-options.fast_cross_validation = 0
 
 
 #######################################################

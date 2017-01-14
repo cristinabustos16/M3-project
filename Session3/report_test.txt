@@ -1,4 +1,4 @@
 
-Mean accuracy: 68.0494102376
-Std. dev. accuracy: 1.43461063358
-Done in 781.970999956 secs.
+Mean accuracy: 83.3074665613
+Std. dev. accuracy: 2.85501994659
+Done in 452.039000034 secs.

@@ -7,24 +7,28 @@ options = general_options_class()
 
 # Codebook options:
 options.compute_codebook = 0
-options.fname_codebook = 'codebook512'
 options.kmeans = 512
+
+# PCA and scaling:
+options.scale_features = 0
+options.apply_pca = 0
+options.ncomp_pca = 20
 
 # Detector options:
 options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
 
 # Dense sampling options:
-options.detector_options.dense_sampling = 0
+options.detector_options.dense_sampling = 1
 # Maximum number of equally spaced keypoints (Grid size)
 options.detector_options.dense_sampling_max_nr_keypoints = 1500
 options.detector_options.dense_sampling_keypoint_step_size = 8
 options.detector_options.dense_sampling_keypoint_radius = 8
 
 # Spatial pyramids options
-options.spatial_pyramids = 0
+options.spatial_pyramids = 1
 options.spatial_pyramids_depth = 2
-options.spatial_pyramids_conf = '1x3'
+options.spatial_pyramids_conf = '3x1'
 
 # Select classifier:
 options.classifier = 'svm'
