@@ -39,10 +39,10 @@ def main(options):
     detector = create_detector(options.detector_options)
         
     # Train system:
-    pca, gmm, stdSlr, clf = train_system(train_images_filenames, train_labels, detector, options)
+    stdSlr_features, pca, gmm, stdSlr, clf = train_system(train_images_filenames, train_labels, detector, options)
     
     # Evaluate system:
-    accuracy = test_system(test_images_filenames, test_labels, detector, pca, gmm, stdSlr, clf, options)
+    accuracy = test_system(test_images_filenames, test_labels, detector, stdSlr_features, pca, gmm, stdSlr, clf, options)
     
     end=time.time()
     running_time = end-start
@@ -99,10 +99,10 @@ def train_and_validate(options):
         # set.
         
         # Train system:
-        pca, gmm, stdSlr, clf = train_system(trainset_images_filenames, trainset_labels, detector, options)
+        stdSlr_features, pca, gmm, stdSlr, clf = train_system(trainset_images_filenames, trainset_labels, detector, options)
     
         # Evaluate system:
-        accuracy[i] = test_system(validation_images_filenames, validation_labels, detector, pca, gmm, stdSlr, clf, options)
+        accuracy[i] = test_system(validation_images_filenames, validation_labels, detector, stdSlr_features, pca, gmm, stdSlr, clf, options)
     
     # Compute the mean and the standard deviation of the accuracies found:
     accuracy_mean = np.mean(accuracy)
@@ -274,8 +274,11 @@ def train_system(train_filenames, train_labels, detector, options):
         D=np.vstack((D,Train_descriptors[i]))
         L=np.hstack((L,np.array([Train_label_per_descriptor[i]]*Train_descriptors[i].shape[0])))
 
+    stdSlr_features = StandardScaler()
     pca = None
     if options.apply_pca:
+        stdSlr_features = StandardScaler().fit(D)
+        D = stdSlr_features.transform(D)
         pca = PCA(n_components = options.ncomp_pca)
         pca.fit(D)
         D = pca.transform(D)
@@ -294,7 +297,8 @@ def train_system(train_filenames, train_labels, detector, options):
     fisher=np.zeros((len(Train_descriptors),options.kmeans*num_features*2),dtype=np.float32)
     for i in xrange(len(Train_descriptors)):
         if options.apply_pca:
-            descriptor = pca.trasform(Train_descriptors[i])
+            descriptor = stdSlr_features.transform(Train_descriptors[i])
+            descriptor = pca.trasform(descriptor)
         else:
             descriptor = Train_descriptors[i]
         fisher[i,:]= ynumpy.fisher(gmm, descriptor, include = ['mu','sigma'])
@@ -311,10 +315,10 @@ def train_system(train_filenames, train_labels, detector, options):
     clf = svm.SVC(kernel='linear', C=1).fit(D_scaled, train_labels)
     print 'Done!'
     
-    return pca, gmm, stdSlr, clf
+    return stdSlr_features, pca, gmm, stdSlr, clf
     
 #############################################################################
-def test_system(test_filenames, test_labels, detector, pca, gmm, stdSlr, clf, options):
+def test_system(test_filenames, test_labels, detector, stdSlr_features, pca, gmm, stdSlr, clf, options):
     if options.apply_pca:
         num_features = options.ncomp_pca
     else:
@@ -328,6 +332,7 @@ def test_system(test_filenames, test_labels, detector, pca, gmm, stdSlr, clf, op
         kpt,des=detector.detectAndCompute(gray,None)
         
         if options.apply_pca:
+            des = stdSlr_features.transform(des)
             des = pca.transform(des)
         
         fisher_test[i,:]=ynumpy.fisher(gmm, des, include = ['mu','sigma'])
