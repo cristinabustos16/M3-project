@@ -231,14 +231,6 @@ def extract_SIFT_features(gray, detector, detector_options):
     return des
     
 ##############################################################################
-def applyPCA(D, options):
-    pca = PCA(n_components = options.ncomp_pca)
-    pca.fit(D)
-    D = pca.transform(D)
-
-    return D, pca
-    
-##############################################################################
 def applyNormalization(D,options):
     D_norm = np.zeros(D.shape)
     if options.normalization == 'power':
@@ -282,8 +274,11 @@ def train_system(train_filenames, train_labels, detector, options):
         D=np.vstack((D,Train_descriptors[i]))
         L=np.hstack((L,np.array([Train_label_per_descriptor[i]]*Train_descriptors[i].shape[0])))
 
+    pca = None
     if options.apply_pca:
-        D, pca = applyPCA(D, options)
+        pca = PCA(n_components = options.ncomp_pca)
+        pca.fit(D)
+        D = pca.transform(D)
     
     print 'Computing gmm with '+str(options.kmeans)+' centroids'
     init=time.time()
@@ -291,10 +286,18 @@ def train_system(train_filenames, train_labels, detector, options):
     end=time.time()
     print 'Done in '+str(end-init)+' secs.'
     
+    if options.apply_pca:
+        num_features = options.ncomp_pca
+    else:
+        num_features = 128
     init=time.time()
-    fisher=np.zeros((len(Train_descriptors),options.kmeans*128*2),dtype=np.float32)
+    fisher=np.zeros((len(Train_descriptors),options.kmeans*num_features*2),dtype=np.float32)
     for i in xrange(len(Train_descriptors)):
-        fisher[i,:]= ynumpy.fisher(gmm, Train_descriptors[i], include = ['mu','sigma'])
+        if options.apply_pca:
+            descriptor = pca.trasform(Train_descriptors[i])
+        else:
+            descriptor = Train_descriptors[i]
+        fisher[i,:]= ynumpy.fisher(gmm, descriptor, include = ['mu','sigma'])
     end=time.time()
     print 'Done in '+str(end-init)+' secs.'
     
@@ -312,7 +315,11 @@ def train_system(train_filenames, train_labels, detector, options):
     
 #############################################################################
 def test_system(test_filenames, test_labels, detector, pca, gmm, stdSlr, clf, options):
-    fisher_test=np.zeros((len(test_filenames),options.kmeans*128*2),dtype=np.float32)
+    if options.apply_pca:
+        num_features = options.ncomp_pca
+    else:
+        num_features = 128
+    fisher_test=np.zeros((len(test_filenames),options.kmeans*num_features*2),dtype=np.float32)
     for i in range(len(test_filenames)):
         filename=test_filenames[i]
         print 'Reading image '+filename
