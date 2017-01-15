@@ -763,10 +763,13 @@ def preprocess_fit(D, options):
     stdSlr_features = StandardScaler()
     if(options.scale_features == 1):
         stdSlr_features = StandardScaler().fit(D)
+        D_scaled = stdSlr_features.transform(D)
+    else:
+        D_scaled = D
     pca = PCA(n_components = options.ncomp_pca)
     if(options.apply_pca == 1):
         print "Fitting principal components analysis..."
-        pca.fit(D)
+        pca.fit(D_scaled)
         print "Explained variance with ", options.ncomp_pca , \
             " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
     return stdSlr_features, pca

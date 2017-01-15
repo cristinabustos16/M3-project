@@ -10,12 +10,12 @@ options = general_options_class()
 options.fast_cross_validation = 0
 
 # Codebook options:
-options.compute_codebook = 1
+options.compute_codebook = 0
 options.kmeans = 512
 
 # PCA and scaling:
-options.scale_features = 1
-options.apply_pca = 1
+options.scale_features = 0
+options.apply_pca = 0
 options.ncomp_pca = 60
 
 # Cross-validation options:
