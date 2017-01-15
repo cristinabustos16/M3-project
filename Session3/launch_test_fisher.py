@@ -6,15 +6,15 @@ if __name__ == '__main__':
 
     # Fixed parameters:
     param1 = 'test_fv_'
-    param2 = 1            # compute_codebook
+    param2 = 0            # compute_codebook
     param3 = 32           # kmeans
-    param4 = 1            # compute_subsets
+    param4 = 0            # compute_subsets
     param5 = 100          # nfeatures SIFT
     param6 = 1            # apply dense sampling
     param7 = 8            # dense sampling step=radius
     param8 = 1            # apply spatial pyramids
     param9 = 2            # spatial pyramids depth
-    param10 = '3x1'       # spatial pyramids configuration
+    param10 = '1x3'       # spatial pyramids configuration
 
     cmd_mask = "python session3_fisher_cluster.py %s %s %s %s %s %s %s %s %s %s"
     report_filename = param1 + str(param8) + '.txt'

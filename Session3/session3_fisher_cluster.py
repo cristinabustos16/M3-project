@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import cPickle
+import cPickle as pickle
 import time
 import math
 from sklearn.preprocessing import StandardScaler
@@ -67,9 +67,9 @@ def train_and_validate(options):
     # Loop over the subsets:
     for i in range(options.k_cv):
         with open('subset_'+str(i)+'_filenames.dat', 'rb') as f1:  # b for binary
-            subsets_filenames[i] = cPickle.load(f1)
+            subsets_filenames[i] = pickle.load(f1)
         with open('subset_'+str(i)+'_labels.dat', 'rb') as f2:  # b for binary
-            subsets_labels[i] = cPickle.load(f2)
+            subsets_labels[i] = pickle.load(f2)
         
     # Create the detector object
     detector = create_detector(options.detector_options)
@@ -136,13 +136,13 @@ def read_dataset(options):
     
     # Read the train and test files
     with open('train_images_filenames.dat', 'rb') as f1:  # b for binary
-        train_images_filenames = cPickle.load(f1)
+        train_images_filenames = pickle.load(f1)
     with open('test_images_filenames.dat', 'rb') as f2:  # b for binary
-        test_images_filenames = cPickle.load(f2)
+        test_images_filenames = pickle.load(f2)
     with open('train_labels.dat', 'rb') as f3:  # b for binary
-        train_labels = cPickle.load(f3)
+        train_labels = pickle.load(f3)
     with open('test_labels.dat', 'rb') as f4:  # b for binary
-        test_labels = cPickle.load(f4)   
+        test_labels = pickle.load(f4)
        
     if options.reduce_dataset:
         # Select randomly only a percentage of the images.        
@@ -178,11 +178,11 @@ def read_dataset(options):
 def create_subsets_cross_validation(k_cv):
     # Create a split for k-fold Cross-Validation.
     # Read the whole training set:
-    with open('train_images_filenames.dat', 'wb') as f1:  # b for binary
-        images_train = cPickle.load(f1)
+    with open('train_images_filenames.dat', 'rb') as f1:  # b for binary
+        images_train = pickle.load(f1)
     train_images_filenames = np.array(images_train)
-    with open('train_labels.dat', 'wb') as f2:  # b for binary
-        labels_train = cPickle.load(f2)
+    with open('train_labels.dat', 'rb') as f2:  # b for binary
+        labels_train = pickle.load(f2)
     train_labels = np.array(labels_train)
     
     nimages = len(train_labels)
@@ -207,10 +207,10 @@ def create_subsets_cross_validation(k_cv):
 #        subset_labels = train_labels[subset]
         # Write the subsets:
         with open('subset_'+str(i)+'_filenames.dat', 'wb') as f3:  # b for binary
-            cPickle.dump(subset_filenames, f3, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(subset_filenames, f3, pickle.HIGHEST_PROTOCOL)
         #cPickle.dump(subset_filenames, open('subset_'+str(i)+'_filenames.dat', "wb"))
         with open('subset_'+str(i)+'_labels.dat', 'wb') as f4:  # b for binary
-            cPickle.dump(subset_labels, f4, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(subset_labels, f4, pickle.HIGHEST_PROTOCOL)
         #cPickle.dump(subset_labels, open('subset_'+str(i)+'_labels.dat', "wb"))
 #        np.savetxt('subset_'+str(i)+'_filenames.txt', subset_filenames, fmt='%s')
 #        np.savetxt('subset_'+str(i)+'_labels.txt', subset_labels, fmt='%s')
