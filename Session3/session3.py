@@ -525,12 +525,14 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                     im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
                     visual_words_im = extract_visual_words_one(im, detector, codebook, \
                             options, stdSlr_features, pca)
-                    visual_words.extend(visual_words_im)
                     if(options.spatial_pyramid_kernel):
                         if(level == 1): #the coarsest level
-                            visual_words_im = visual_words_im * (2^(1-options.spatial_pyramids_depth))
+                            weight = 2**(1-options.spatial_pyramids_depth)
+                            visual_words_im = [x*weight for x in visual_words_im]
                         else:
-                            visual_words_im = visual_words_im * (2^(-level))
+                            weight = (2**(-level))
+                            visual_words_im = [x*weight for x in visual_words_im]
+                    visual_words.extend(visual_words_im)        
                         
                     
     elif(options.spatial_pyramids_conf == '2x1'):
