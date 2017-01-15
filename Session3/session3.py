@@ -526,6 +526,12 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                     visual_words_im = extract_visual_words_one(im, detector, codebook, \
                             options, stdSlr_features, pca)
                     visual_words.extend(visual_words_im)
+                    if(options.spatial_pyramid_kernel):
+                        if(level == 1): #the coarsest level
+                            visual_words_im = visual_words_im * (2^(1-options.spatial_pyramids_depth))
+                        else:
+                            visual_words_im = visual_words_im * (2^(-level))
+                        
                     
     elif(options.spatial_pyramids_conf == '2x1'):
         for level in range(options.spatial_pyramids_depth):
@@ -957,6 +963,7 @@ class general_options_class:
     spatial_pyramids = 0 # Apply spatial pyramids in BoW framework or not
     spatial_pyramids_depth = 3 # Number of levels of the spatial pyramid.
     spatial_pyramids_conf = '2x2' # Spatial pyramid configuracion ('2x2', '3x1', '2x1')
+    spatial_pyramid_kernel = 0
     file_name = 'test'
     show_plots = 0
     save_plots = 0
