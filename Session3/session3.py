@@ -38,11 +38,11 @@ def main(options):
     # Create the detector object
     detector = create_detector(options.detector_options)
         
-    clf, codebook, stdSlr_VW, stdSlr_features, pca, train_scaled = train_system(train_images_filenames, \
+    clf, codebook, stdSlr_VW, stdSlr_features, pca = train_system(train_images_filenames, \
                                 train_labels, detector, options)
     
     accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
-                                    clf, stdSlr_VW, stdSlr_features, pca, options, train_scaled)
+                                    clf, stdSlr_VW, stdSlr_features, pca, options)
     
     end=time.time()
     running_time = end-start
@@ -822,7 +822,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
     # Train the classifier:
     clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
-    return clf, codebook, stdSlr_VW, stdSlr_features, pca, train_visual_words_scaled
+    return clf, codebook, stdSlr_VW, stdSlr_features, pca
 
 
 ##############################################################################
@@ -843,7 +843,7 @@ def train_system_nocompute(train_visual_words, train_labels, detector, codebook,
     
 ##############################################################################
 def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
-                                stdSlr_VW, stdSlr_features, pca, options, train_scaled):
+                                stdSlr_VW, stdSlr_features, pca, options):
     # Measure the performance of the system with the test set.    
     
     # Extract the visual words from the test images:
