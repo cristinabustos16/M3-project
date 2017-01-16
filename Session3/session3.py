@@ -274,10 +274,10 @@ def read_dataset(options):
 def create_subsets_cross_validation(k_cv):
     # Create a split for k-fold Cross-Validation.
     # Read the whole training set:
-    with open('train_images_filenames.dat', 'rb') as f1:  # b for binary
+    with open('train_images_filenames.dat', 'r') as f1:  # b for binary
         images_train = cPickle.load(f1)
     train_images_filenames = np.array(images_train)
-    with open('train_labels.dat', 'rb') as f2:  # b for binary
+    with open('train_labels.dat', 'r') as f2:  # b for binary
         labels_train = cPickle.load(f2)
     train_labels = np.array(labels_train)
     
@@ -302,12 +302,12 @@ def create_subsets_cross_validation(k_cv):
 #        subset_filenames = train_images_filenames[subset]
 #        subset_labels = train_labels[subset]
         # Write the subsets:
-        with open('subset_'+str(i)+'_filenames.dat', 'wb') as f3:  # b for binary
-            cPickle.dump(subset_filenames, f3, cPickle.HIGHEST_PROTOCOL)
-        #cPickle.dump(subset_filenames, open('subset_'+str(i)+'_filenames.dat', "wb"))
-        with open('subset_'+str(i)+'_labels.dat', 'wb') as f4:  # b for binary
-            cPickle.dump(subset_labels, f4, cPickle.HIGHEST_PROTOCOL)
-        #cPickle.dump(subset_labels, open('subset_'+str(i)+'_labels.dat', "wb"))
+#        with open('subset_'+str(i)+'_filenames.dat', 'w') as f3:  # b for binary
+#            cPickle.dump(subset_filenames, f3, cPickle.HIGHEST_PROTOCOL)
+        cPickle.dump(subset_filenames, open('subset_'+str(i)+'_filenames.dat', "wb"))
+#        with open('subset_'+str(i)+'_labels.dat', 'w') as f4:  # b for binary
+#            cPickle.dump(subset_labels, f4, cPickle.HIGHEST_PROTOCOL)
+        cPickle.dump(subset_labels, open('subset_'+str(i)+'_labels.dat', "wb"))
 #        np.savetxt('subset_'+str(i)+'_filenames.txt', subset_filenames, fmt='%s')
 #        np.savetxt('subset_'+str(i)+'_labels.txt', subset_labels, fmt='%s')
         # Update beginning of indexes:
