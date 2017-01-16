@@ -527,11 +527,14 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                     visual_words_im = extract_visual_words_one(im, detector, codebook, \
                             options, stdSlr_features, pca)
                     if(options.spatial_pyramid_kernel):
+                        L = options.spatial_pyramids_depth - 1;
                         if(level == 0): #the coarsest level
-                            weight = 2**(1-options.spatial_pyramids_depth)
+                            weight = 2**(-L)
+                            #print 'level '+str(level)+' weight '+str(weight)
                             visual_words_im = [x*weight for x in visual_words_im]
                         else:
-                            weight = (2**(-level))
+                            weight = 2**(-(L-level+1))
+                            #print 'level '+str(level)+' weight '+str(weight)
                             visual_words_im = [x*weight for x in visual_words_im]
                     visual_words.extend(visual_words_im)        
                         
@@ -568,13 +571,15 @@ def histogramIntersection(M, N):
     n_samples , n_features = N.shape
     K_int = np.zeros(shape=(m_samples,n_samples),dtype=np.float)
     #K_int = 0
-    for p in range(m_samples):
-        nonzero_ind = [i for (i, val) in enumerate(M[p]) if val > 0]
-        temp_M =  [M[p][index] for index in nonzero_ind]
-        for q in range (n_samples):
-            temp_N =  [N[q][index] for index in nonzero_ind]
-            K_int[p][q] = np.sum(np.minimum(temp_M,temp_N)) 
-                
+#    for p in range(m_samples):
+#        nonzero_ind = [i for (i, val) in enumerate(M[p]) if val > 0]
+#        temp_M =  [M[p][index] for index in nonzero_ind]
+#        for q in range (n_samples):
+#            temp_N =  [N[q][index] for index in nonzero_ind]
+#            K_int[p][q] = np.sum(np.minimum(temp_M,temp_N)) 
+    for i in range(m_samples):
+         for j in range(n_samples):
+             K_int[i][j] = np.sum(np.minimum(M[i],N[j]))
     return K_int
 
 
@@ -853,13 +858,9 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # Scale words:
     test_visual_words_scaled = stdSlr_VW.transform(test_visual_words)
     
-    if(options.SVM_options.kernel == 'precomputed'):
-        predictMatrix = histogramIntersection(test_visual_words_scaled,train_scaled)
-        test_predictions = clf.predict(predictMatrix)
-        accuracy = 100 * accuracy_score(test_labels, test_predictions);
-    else:
-        # Compute the accuracy:
-        accuracy = 100 * clf.score(test_visual_words_scaled, test_labels)
+    
+    # Compute the accuracy:
+    accuracy = 100 * clf.score(test_visual_words_scaled, test_labels)
     
     # Only if pass a valid file descriptor
     if options.compute_evaluation == 1:
