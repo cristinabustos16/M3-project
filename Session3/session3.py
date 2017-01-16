@@ -16,6 +16,7 @@ from sklearn.preprocessing import label_binarize
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
+from sklearn.metrics import accuracy_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
@@ -37,11 +38,11 @@ def main(options):
     # Create the detector object
     detector = create_detector(options.detector_options)
         
-    clf, codebook, stdSlr_VW, stdSlr_features, pca = train_system(train_images_filenames, \
+    clf, codebook, stdSlr_VW, stdSlr_features, pca, train_scaled = train_system(train_images_filenames, \
                                 train_labels, detector, options)
     
     accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
-                                    clf, stdSlr_VW, stdSlr_features, pca, options)
+                                    clf, stdSlr_VW, stdSlr_features, pca, options, train_scaled)
     
     end=time.time()
     running_time = end-start
@@ -526,7 +527,7 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                     visual_words_im = extract_visual_words_one(im, detector, codebook, \
                             options, stdSlr_features, pca)
                     if(options.spatial_pyramid_kernel):
-                        if(level == 1): #the coarsest level
+                        if(level == 0): #the coarsest level
                             weight = 2**(1-options.spatial_pyramids_depth)
                             visual_words_im = [x*weight for x in visual_words_im]
                         else:
@@ -567,10 +568,13 @@ def histogramIntersection(M, N):
     n_samples , n_features = N.shape
     K_int = np.zeros(shape=(m_samples,n_samples),dtype=np.float)
     #K_int = 0
-    for i in range(m_samples):
-        for j in range(n_samples):
-            K_int[i][j] = np.sum(np.minimum(M[i],N[j]))
-            
+    for p in range(m_samples):
+        nonzero_ind = [i for (i, val) in enumerate(M[p]) if val > 0]
+        temp_M =  [M[p][index] for index in nonzero_ind]
+        for q in range (n_samples):
+            temp_N =  [N[q][index] for index in nonzero_ind]
+            K_int[p][q] = np.sum(np.minimum(temp_M,temp_N)) 
+                
     return K_int
 
 
@@ -635,6 +639,10 @@ def train_SVM(X, L, SVM_options):
     elif(SVM_options.kernel == 'histogramIntersection'):
         clf = svm.SVC(kernel=histogramIntersection, C = SVM_options.C, coef0 = SVM_options.coef0, \
                 random_state = 1, probability = SVM_options.probability).fit(X, L)
+    elif(SVM_options.kernel == 'precomputed'):
+        kernelMatrix = histogramIntersection(X,X);
+        clf = svm.SVC(kernel=histogramIntersection, C = SVM_options.C, coef0 = SVM_options.coef0, \
+                random_state = 1, probability = SVM_options.probability).fit(kernelMatrix, L)
     else:
         print 'SVM kernel not recognized!'
     print 'Done!'
@@ -814,7 +822,7 @@ def train_system(train_images_filenames, train_labels, detector, options):
     # Train the classifier:
     clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
-    return clf, codebook, stdSlr_VW, stdSlr_features, pca
+    return clf, codebook, stdSlr_VW, stdSlr_features, pca, train_visual_words_scaled
 
 
 ##############################################################################
@@ -835,7 +843,7 @@ def train_system_nocompute(train_visual_words, train_labels, detector, codebook,
     
 ##############################################################################
 def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
-                                stdSlr_VW, stdSlr_features, pca, options):
+                                stdSlr_VW, stdSlr_features, pca, options, train_scaled):
     # Measure the performance of the system with the test set.    
     
     # Extract the visual words from the test images:
@@ -845,8 +853,13 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # Scale words:
     test_visual_words_scaled = stdSlr_VW.transform(test_visual_words)
     
-    # Compute the accuracy:
-    accuracy = 100 * clf.score(test_visual_words_scaled, test_labels)
+    if(options.SVM_options.kernel == 'precomputed'):
+        predictMatrix = histogramIntersection(test_visual_words_scaled,train_scaled)
+        test_predictions = clf.predict(predictMatrix)
+        accuracy = 100 * accuracy_score(test_labels, test_predictions);
+    else:
+        # Compute the accuracy:
+        accuracy = 100 * clf.score(test_visual_words_scaled, test_labels)
     
     # Only if pass a valid file descriptor
     if options.compute_evaluation == 1:
