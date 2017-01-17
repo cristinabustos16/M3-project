@@ -16,10 +16,20 @@ from sklearn.preprocessing import label_binarize
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
-from sklearn.metrics import accuracy_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+
+# Functions that need yael library. If running Linux, use the two first,
+# and comment the other two. With Windows, the other way round, comment
+# the two first, and use the two last lines. In this case, it is not
+# possible to use Fisher Vectors.
+# Tools for Linux:
+#from tools_yael import predict_fishergmm
+#from tools_yael import compute_codebook_gmm
+# Tools for Windows:
+from tools_yael_fake import predict_fishergmm
+from tools_yael_fake import compute_codebook_gmm
 
 
 ##############################################################################
@@ -312,7 +322,7 @@ def create_subsets_cross_validation(k_cv):
 #        np.savetxt('subset_'+str(i)+'_labels.txt', subset_labels, fmt='%s')
         # Update beginning of indexes:
         ini = fin
-        
+    
     
 ##############################################################################
 def compute_and_write_codebook(options):
@@ -337,18 +347,25 @@ def compute_and_write_codebook(options):
     D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
     
     # Compute the codebook with the features:
-    codebook = compute_codebook(options.kmeans, D)
+    codebook = compute_codebook(D, options)
     
     # Write codebook:
-    #cPickle.dump(codebook, open(options.fname_codebook+'.dat', "wb"))
-    with open(options.fname_codebook+'.dat', 'w') as f4:  # b for binary
+    # Select the name of the file, depending on the options:
+    if options.use_fisher:
+        codebookname = 'gmm' + str(options.kmeans)
+    else:
+        codebookname = 'codebook' + str(options.kmeans)
+    if options.detector_options.dense_sampling == 1:
+        codebookname = codebookname + '_dense'
+    codebookname = codebookname + '.dat'
+    with open(codebookname, 'w') as f4:  # b for binary
         cPickle.dump(codebook, f4, cPickle.HIGHEST_PROTOCOL)
 
     return codebook
     
 
 ##############################################################################
-def compute_codebook(kmeans, D):
+def compute_codebook_kmeans(kmeans, D):
     # Clustering (unsupervised classification)
     # Apply kmeans over the features to computer the codebook.
     print 'Computing kmeans with ' + str(kmeans) + ' centroids'
@@ -360,6 +377,17 @@ def compute_codebook(kmeans, D):
     codebook.fit(D)
     end = time.time()
     print 'Done in ' + str(end-init) + ' secs.'
+    return codebook
+    
+
+##############################################################################
+def compute_codebook(D, options):
+    # Clustering (unsupervised classification)
+    # It can be either K-means or a GMM for Fisher Vectors.
+    if options.use_fisher:
+        codebook = compute_codebook_gmm(options.kmeans, D)
+    else:
+        codebook = compute_codebook_kmeans(options.kmeans, D)
     return codebook
     
     
@@ -387,6 +415,8 @@ def create_detector(detector_options):
         detector = cv2.ORB(detector_options.nfeatures)
     else: 
         print 'Error: feature detector not recognized.'
+        sys.stdout.flush()
+        sys.exit()
     return detector
     
 
@@ -464,6 +494,12 @@ def extract_visual_words_all(images_filenames, detector, codebook, options, \
         nwords = sum(nhistsperlevel) * options.kmeans
     else:
         nwords = options.kmeans
+        
+    if(options.use_fisher):
+        if(options.apply_pca):
+            nwords = nwords * options.ncomp_pca * 2
+        else:
+            nwords = nwords * 128 * 2
     
     visual_words = np.zeros((nimages, nwords), dtype=np.float32)
     for i in range(nimages):
@@ -495,6 +531,7 @@ def extract_visual_words_one(gray, detector, codebook, options, stdSlr_features,
     else:
         kpt, des = detector.detectAndCompute(gray,None)
     
+    # From features to words or fisher vectors:
     if not kpt:
         words = []
         
@@ -503,9 +540,11 @@ def extract_visual_words_one(gray, detector, codebook, options, stdSlr_features,
         des = preprocess_apply(des, stdSlr_features, pca, options)
         
         # From features to words:
-        words = codebook.predict(des)
-        
-    visual_words = np.bincount(words,minlength=options.kmeans)
+        if(options.use_fisher):
+            visual_words = predict_fishergmm(codebook, des, options)
+        else:
+            words = codebook.predict(des)
+            visual_words = np.bincount(words,minlength=options.kmeans)
     
     return visual_words
     
@@ -749,14 +788,8 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, \
 ##############################################################################
 def preprocess_and_codebook(train_images_filenames, detector, options):
     # Fit the scaler and the PCA, apply them, and compute the codebook.
-
-    # Get the codebook, and, if indicated so, fit the scaler and the PCA:
-    if options.apply_pca or options.scale_features:
-        if not options.compute_codebook:
-            print 'Error: If applying scale or PCA, codebook must be computed.'
-            print 'Please, switch to 1 option compute_codebook.'
-            sys.stdout.flush()
-            sys.exit()
+    
+    if options.compute_codebook:
         # Extract features from train images:
         D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
                     detector, options.detector_options)
@@ -765,15 +798,17 @@ def preprocess_and_codebook(train_images_filenames, detector, options):
         # Apply scaler and PCA:
         D = preprocess_apply(D, stdSlr_features, pca, options)
         # Compute codebook:
-        codebook = compute_codebook(options.kmeans, D)
+        codebook = compute_codebook(D, options)
         
     else:
+        if options.apply_pca or options.scale_features:
+            print 'Error: If applying scale or PCA, codebook must be computed.'
+            print 'Please, switch to 1 option compute_codebook.'
+            sys.stdout.flush()
+            sys.exit()
         stdSlr_features = []
         pca = []
-        if options.compute_codebook:
-            codebook = compute_codebook(options)
-        else:
-            codebook = read_codebook(options)
+        codebook = read_codebook(options)
     
     return codebook, stdSlr_features, pca
     
@@ -988,3 +1023,4 @@ class general_options_class:
     reduce_dataset = 0 # Consider only a part of the dataset. Useful for fast computation and checking code errors.
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
+    use_fisher = 0 # Use fisher vectors.

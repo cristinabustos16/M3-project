@@ -6,13 +6,12 @@ from session3 import main
 options = general_options_class()
 
 # Codebook options:
-options.compute_codebook = 0
-options.fname_codebook = 'codebook512'
+options.compute_codebook = 1
 options.kmeans = 512
 
 # PCA and scaling:
-options.scale_features = 0
-options.apply_pca = 0
+options.scale_features = 1
+options.apply_pca = 1
 options.ncomp_pca = 20
 
 # Detector options:
@@ -20,7 +19,7 @@ options.detector_options.descriptor = 'SIFT'
 options.detector_options.nfeatures = 100
 
 # Dense sampling options:
-options.detector_options.dense_sampling = 0
+options.detector_options.dense_sampling = 1
 # Maximum number of equally spaced keypoints (Grid size)
 options.detector_options.dense_sampling_max_nr_keypoints = 1500
 options.detector_options.dense_sampling_keypoint_step_size = 8
@@ -54,7 +53,7 @@ options.file_name = 'test_kernel_'
 options.show_plots = 1
 
 # Reduce dataset?
-options.reduce_dataset = 0
+options.reduce_dataset = 1
 
 
 #######################################################
