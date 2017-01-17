@@ -557,6 +557,7 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
     visual_words = []
     
     if(options.spatial_pyramids_conf == '2x2'):
+        
         for level in range(options.spatial_pyramids_depth):
             deltai = height / (2**level)
             deltaj = width / (2**level)
@@ -569,12 +570,10 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                         L = options.spatial_pyramids_depth - 1;
                         if(level == 0): #the coarsest level
                             weight = 2**(-L)
-                            #print 'level '+str(level)+' weight '+str(weight)
-                            visual_words_im = [x*weight for x in visual_words_im]
+                            visual_words_im = np.multiply(visual_words_im, weight)
                         else:
                             weight = 2**(-(L-level+1))
-                            #print 'level '+str(level)+' weight '+str(weight)
-                            visual_words_im = [x*weight for x in visual_words_im]
+                            visual_words_im = np.multiply(visual_words_im, weight)
                     visual_words.extend(visual_words_im)        
                         
                     
@@ -585,6 +584,15 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                 im = gray[i*deltai : (i+1)*deltai, :]
                 visual_words_im = extract_visual_words_one(im, detector, codebook, \
                         options, stdSlr_features, pca)
+                if(options.spatial_pyramid_kernel):
+                        L = options.spatial_pyramids_depth - 1;
+                        if(level == 0): #the coarsest level
+                            weight = 2**(-L)
+                            visual_words_im = np.multiply(visual_words_im, weight)
+                        else:
+                            weight = 2**(-(L-level+1))
+                            visual_words_im = np.multiply(visual_words_im, weight)
+                    
                 visual_words.extend(visual_words_im)
                     
     elif(options.spatial_pyramids_conf == '3x1'):
@@ -594,6 +602,15 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
                 im = gray[i*deltai : (i+1)*deltai, :]
                 visual_words_im = extract_visual_words_one(im, detector, codebook, \
                         options, stdSlr_features, pca)
+                if(options.spatial_pyramid_kernel):
+                        L = options.spatial_pyramids_depth - 1;
+                        if(level == 0): #the coarsest level
+                            weight = 2**(-L)
+                            visual_words_im = np.multiply(visual_words_im, weight)
+                        else:
+                            weight = 2**(-(L-level+1))
+                            visual_words_im = np.multiply(visual_words_im, weight)
+                
                 visual_words.extend(visual_words_im)
         
     else:
@@ -602,7 +619,7 @@ def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
         sys.exit()
                 
     return visual_words
-    
+        
     
 ##############################################################################
 def histogramIntersection(M, N):
@@ -859,6 +876,9 @@ def train_system(train_images_filenames, train_labels, detector, options):
     # Scale words:
     train_visual_words_scaled = stdSlr_VW.transform(train_visual_words)
     
+    #don't apply scale when the kernel is histogramIntersection
+    if(options.SVM_options.kernel == 'histogramIntersection'):
+        train_visual_words_scaled = train_visual_words
     # Train the classifier:
     clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
@@ -893,6 +913,10 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # Scale words:
     test_visual_words_scaled = stdSlr_VW.transform(test_visual_words)
     
+    #don't apply scale when the kernel is histogramIntersection
+    if(options.SVM_options.kernel == 'histogramIntersection'):
+        test_visual_words_scaled = test_visual_words
+        #test_visual_words_scaled = test_visual_words / test_visual_words.max()
     
     # Compute the accuracy:
     accuracy = 100 * clf.score(test_visual_words_scaled, test_labels)
