@@ -19,7 +19,17 @@ from sklearn.metrics import average_precision_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
-from yael import ynumpy
+
+# Functions that need yael library. If running Linux, use the two first,
+# and comment the other two. With Windows, the other way round, comment
+# the two first, and use the two last lines. In this case, it is not
+# possible to use Fisher Vectors.
+# Tools for Linux:
+from tools_yael import predict_fishergmm
+from tools_yael import compute_codebook_gmm
+# Tools for Windows:
+#from tools_yael_fake import predict_fishergmm
+#from tools_yael_fake import compute_codebook_gmm
 
 
 ##############################################################################
@@ -312,15 +322,6 @@ def create_subsets_cross_validation(k_cv):
 #        np.savetxt('subset_'+str(i)+'_labels.txt', subset_labels, fmt='%s')
         # Update beginning of indexes:
         ini = fin
-        
-    
-##############################################################################
-def predict_fishergmm(gmm, des, options):
-    # Compute the Fisher Vectors from the features.
-    # des is supposed to be the features of a single image.
-    des2 = np.float32(des)
-    fisher = ynumpy.fisher(gmm, des2, include = ['mu','sigma'])
-    return fisher
     
     
 ##############################################################################
@@ -349,24 +350,18 @@ def compute_and_write_codebook(options):
     codebook = compute_codebook(D, options)
     
     # Write codebook:
-    #cPickle.dump(codebook, open(options.fname_codebook+'.dat', "wb"))
-    with open(options.fname_codebook+'.dat', 'w') as f4:  # b for binary
+    # Select the name of the file, depending on the options:
+    if options.use_fisher:
+        codebookname = 'gmm' + str(options.kmeans)
+    else:
+        codebookname = 'codebook' + str(options.kmeans)
+    if options.detector_options.dense_sampling == 1:
+        codebookname = codebookname + '_dense'
+    codebookname = codebookname + '.dat'
+    with open(codebookname, 'w') as f4:  # b for binary
         cPickle.dump(codebook, f4, cPickle.HIGHEST_PROTOCOL)
 
     return codebook
-    
-
-##############################################################################
-def compute_codebook_gmm(kmeans, D):
-    # Clustering (unsupervised classification)
-    # Fit a GMM over the features.
-    print 'Computing gmm with ' + str(kmeans) + ' centroids'
-    sys.stdout.flush()
-    init = time.time()
-    gmm = ynumpy.gmm_learn(np.float32(D), kmeans)
-    end = time.time()
-    print 'Done in ' + str(end-init) + ' secs.'
-    return gmm
     
 
 ##############################################################################
@@ -420,6 +415,8 @@ def create_detector(detector_options):
         detector = cv2.ORB(detector_options.nfeatures)
     else: 
         print 'Error: feature detector not recognized.'
+        sys.stdout.flush()
+        sys.exit()
     return detector
     
 
