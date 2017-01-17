@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import cPickle
 import time
+import math
 from sklearn.preprocessing import StandardScaler
 from sklearn import svm
 from sklearn import cluster
@@ -852,7 +853,10 @@ def train_system(train_images_filenames, train_labels, detector, options):
     # Extract the visual words from the train images:
     train_visual_words = extract_visual_words_all(train_images_filenames, \
                                 detector, codebook, options, stdSlr_features, pca)
-    
+
+    if options.apply_normalization:
+        train_visual_words = applyNormalization(train_visual_words, options)
+
     # Fit scaler for words:
     stdSlr_VW = StandardScaler().fit(train_visual_words)
     
@@ -864,6 +868,25 @@ def train_system(train_images_filenames, train_labels, detector, options):
     
     return clf, codebook, stdSlr_VW, stdSlr_features, pca
 
+##############################################################################
+def applyNormalization(D,options):
+    D_norm = np.zeros(D.shape)
+    if options.normalization == 'power':
+        for i in range(D.shape[0]):
+            for j in range(D.shape[1]):
+                D_norm[i,j] = math.copysign(math.sqrt(math.fabs(D[i,j])),D[i,j])
+    elif options.normalization == 'L2':
+        for i in range(D.shape[0]):
+            aux = 0
+            for j in range(D.shape[1]):
+                aux = aux + math.pow(D[i,j],2)
+            aux = math.sqrt(aux)
+            D_norm[i] = D[i] / aux
+    else:
+        print 'Normalization function not recognized.'
+        sys.stdout.flush()
+        sys.exit()
+    return D_norm
 
 ##############################################################################
 def train_system_nocompute(train_visual_words, train_labels, detector, codebook, options):
@@ -889,7 +912,9 @@ def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
     # Extract the visual words from the test images:
     test_visual_words = extract_visual_words_all(test_images_filenames, detector,\
                                             codebook, options, stdSlr_features, pca)
-    
+    if options.apply_normalization:
+        test_visual_words = applyNormalization(test_visual_words, options)
+
     # Scale words:
     test_visual_words_scaled = stdSlr_VW.transform(test_visual_words)
     
@@ -1024,3 +1049,5 @@ class general_options_class:
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
     use_fisher = 0 # Use fisher vectors.
+    apply_normalization = 0
+    normalization = 'power'
