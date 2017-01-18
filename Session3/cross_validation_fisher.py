@@ -1,7 +1,7 @@
 # Executable program.
-from session3_fisher2 import general_options_class
-from session3_fisher2 import train_and_validate
-from session3_fisher2 import train_and_validate_slow
+from session3_fisher import general_options_class
+from session3_fisher import train_and_validate
+from session3_fisher import train_and_validate_slow
 
 # Select options:
 options = general_options_class()

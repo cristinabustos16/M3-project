@@ -1,6 +1,6 @@
 # Executable program.
-from session3_fisher2 import general_options_class
-from session3_fisher2 import main
+from session3_fisher import general_options_class
+from session3_fisher import main
 
 # Select options:
 options = general_options_class()
