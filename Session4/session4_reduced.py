@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 import cPickle
 import time
@@ -19,21 +18,18 @@ from sklearn.metrics import average_precision_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from keras.preprocessing import image
+from keras.applications.vgg19 import preprocess_input
+from keras.applications.vgg16 import VGG16
+from keras.models import Model
 
-# Functions that need yael library. If running Linux, use the two first,
-# and comment the other two. With Windows, the other way round, comment
-# the two first, and use the two last lines. In this case, it is not
-# possible to use Fisher Vectors.
-# Tools for Linux:
-#from tools_yael import predict_fishergmm
-#from tools_yael import compute_codebook_gmm
-# Tools for Windows:
-from tools_yael_fake import predict_fishergmm
-from tools_yael_fake import compute_codebook_gmm
+sys.path.append('.')
+from tools_yael import predict_fishergmm
+from tools_yael import compute_codebook_gmm
 
 
 ##############################################################################
-def main(options):
+def main_cnn(options):
     start = time.time()
     
     # Read the train and test files
@@ -45,14 +41,16 @@ def main(options):
     print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
     print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
     
-    # Create the detector object
-    detector = create_detector(options.detector_options)
+    # Create the CNN:
+    detector = create_cnn()
         
-    clf, codebook, stdSlr_VW, stdSlr_features, pca = train_system(train_images_filenames, \
-                                train_labels, detector, options)
+    clf, codebook, stdSlr_VW, stdSlr_features, pca = \
+            train_system_cnn(train_images_filenames, train_labels, \
+                                detector, options)
     
-    accuracy = test_system(test_images_filenames, test_labels, detector, codebook, \
-                                    clf, stdSlr_VW, stdSlr_features, pca, options)
+    accuracy = test_system_cnn(test_images_filenames, test_labels, \
+                                detector, codebook, clf, stdSlr_VW, \
+                                stdSlr_features, pca, options)
     
     end=time.time()
     running_time = end-start
@@ -60,182 +58,14 @@ def main(options):
     print 'Done in '+str(running_time)+' secs.'
     
     return accuracy, running_time
-
-
-##############################################################################
-def train_and_validate(options):
-    start = time.time()
     
-    if options.apply_pca == 1 or options.scale_features == 1:
-        print 'Error: Not possible to use fast cross-validation with scaling or PCA'
-        sys.stdout.flush()
-        sys.exit()
-
-    # Compute or read the codebook:
-    if options.compute_codebook:
-        codebook = compute_and_write_codebook(options)
-    else:
-        codebook = read_codebook(options)
-        
-    # Create the cross-validation subsets:
-    if options.compute_subsets:
-        create_subsets_cross_validation(options.k_cv)
-        
-    # Read the subsets:
-    # We create a list where the element i is another list with all the file
-    # names belonging to subset i. The same for the labels of the images.
-    subsets_filenames = list(xrange(options.k_cv))
-    subsets_labels = list(xrange(options.k_cv))
-    # Loop over the subsets:
-    for i in range(options.k_cv):
-        subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','r'))
-        subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','r'))
-        
-    # Create the detector object
-    detector = create_detector(options.detector_options)
     
-    # Extract the features for all the subsets
-    subset_visual_words = list(xrange(options.k_cv))
-    stdSlr_features = []
-    pca = []
-    # Loop over the subsets:
-    for i in range(options.k_cv):
-        subset_visual_words[i] = extract_visual_words_all(subsets_filenames[i], \
-                                detector, codebook, options, stdSlr_features, pca)
-        
-    # Initialize vector to store the accuracy of each training.
-    accuracy = np.zeros(options.k_cv)
-    
-    # Train and evaluate k times:
-    for i in range(options.k_cv):
-        # First, we create a list with the names of the files we will use for
-        # training. These are the files in all the subsets except the i-th one.
-        # The same for the labels.
-        # Initialize:
-        trainset_visual_words = []
-        trainset_labels = []
-        for j in range(options.k_cv):
-            if(i != j): # If it is not the i-th subset, add it to our trainset.
-                trainset_visual_words.extend(subset_visual_words[j])
-                trainset_labels.extend(subsets_labels[j])
-        # For validation, we will use the rest of the images, i.e., the
-        # subset i.
-        validation_visual_words = subset_visual_words[i]
-        validation_labels = subsets_labels[i]
-    
-        # The rest is exactly the same as a normal training-testing: we train
-        # with the train set we have just built, and test with the evaluation
-        # set.
-        
-        # Train system:
-        clf, stdSlr_VW = train_system_nocompute(trainset_visual_words, trainset_labels, \
-                                            detector, codebook, options)
-    
-        # Evaluate system:
-        accuracy[i] = test_system_nocompute(validation_visual_words, validation_labels, \
-                                        detector, codebook, clf, stdSlr_VW, options)
-    
-    # Compute the mean and the standard deviation of the accuracies found:
-    accuracy_mean = np.mean(accuracy)
-    print('Mean accuracy: ' + str(accuracy_mean))
-    accuracy_sd = np.std(accuracy, ddof = 1)
-    print('Std. dev. accuracy: ' + str(accuracy_sd))
-    
-    end = time.time()
-    running_time = end-start
-    print 'Done in '+str(running_time)+' secs.'
-    
-    # Write the results in a text file:
-    report_name = 'report_' + options.file_name + '.txt'
-    fd = open(report_name, 'w')
-    try:
-        fd.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
-        fd.write('\n' + 'Std. dev. accuracy: ' + str(accuracy_sd))
-        fd.write('\n' + 'Done in ' + str(end - start) + ' secs.')
-    except OSError:
-        sys.stdout.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
-    fd.close()
-    
-    return accuracy_mean, accuracy_sd, running_time
-
-
-##############################################################################
-def train_and_validate_slow(options):
-    start = time.time()
-        
-    # Create the cross-validation subsets:
-    if options.compute_subsets:
-        create_subsets_cross_validation(options.k_cv)
-        
-    # Read the subsets:
-    # We create a list where the element i is another list with all the file
-    # names belonging to subset i. The same for the labels of the images.
-    subsets_filenames = list(xrange(options.k_cv))
-    subsets_labels = list(xrange(options.k_cv))
-    # Loop over the subsets:
-    for i in range(options.k_cv):
-        subsets_filenames[i] = cPickle.load(open('subset_'+str(i)+'_filenames.dat','r'))
-        subsets_labels[i] = cPickle.load(open('subset_'+str(i)+'_labels.dat','r'))
-        
-    # Create the detector object
-    detector = create_detector(options.detector_options)
-    
-    # Initialize vector to store the accuracy of each training.
-    accuracy = np.zeros(options.k_cv)
-    
-    # Train and evaluate k times:
-    for i in range(options.k_cv):
-        # First, we create a list with the names of the files we will use for
-        # training. These are the files in all the subsets except the i-th one.
-        # The same for the labels.
-        # Initialize:
-        trainset_images_filenames = []
-        trainset_labels = []
-        for j in range(options.k_cv):
-            if(i != j): # If it is not the i-th subset, add it to our trainset.
-                trainset_images_filenames.extend(subsets_filenames[j])
-                trainset_labels.extend(subsets_labels[j])
-        # For validation, we will use the rest of the images, i.e., the
-        # subset i.
-        validation_images_filenames = subsets_filenames[i]
-        validation_labels = subsets_labels[i]
-    
-        # The rest is exactly the same as a normal training-testing: we train
-        # with the train set we have just built, and test with the evaluation
-        # set.
-        
-        # Train system:
-        clf, codebook, stdSlr_VW, stdSlr_features, pca = \
-                        train_system(trainset_images_filenames, trainset_labels, \
-                                            detector, options)
-    
-        # Evaluate system:
-        accuracy[i] = test_system(validation_images_filenames, validation_labels, \
-                                        detector, codebook, clf, stdSlr_VW, \
-                                        stdSlr_features, pca, options)
-    
-    # Compute the mean and the standard deviation of the accuracies found:
-    accuracy_mean = np.mean(accuracy)
-    print('Mean accuracy: ' + str(accuracy_mean))
-    accuracy_sd = np.std(accuracy, ddof = 1)
-    print('Std. dev. accuracy: ' + str(accuracy_sd))
-    
-    end = time.time()
-    running_time = end-start
-    print 'Done in '+str(running_time)+' secs.'
-    
-    # Write the results in a text file:
-    report_name = 'report_' + options.file_name + '.txt'
-    fd = open(report_name, 'w')
-    try:
-        fd.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
-        fd.write('\n' + 'Std. dev. accuracy: ' + str(accuracy_sd))
-        fd.write('\n' + 'Done in ' + str(end - start) + ' secs.')
-    except OSError:
-        sys.stdout.write('\n' + 'Mean accuracy: ' + str(accuracy_mean))
-    fd.close()
-    
-    return accuracy_mean, accuracy_sd, running_time
+def create_cnn():
+    # Load VGG model
+    base_model = VGG16(weights='imagenet')
+    # Crop the network:
+    cnn = Model(input=base_model.input, output=base_model.get_layer('block5_conv2').output)
+    return cnn
 
 
 ##############################################################################
@@ -323,46 +153,6 @@ def create_subsets_cross_validation(k_cv):
         # Update beginning of indexes:
         ini = fin
     
-    
-##############################################################################
-def compute_and_write_codebook(options):
-    
-    # read the train and test files
-    with open('train_images_filenames.dat', 'r') as f1:  # b for binary
-        train_images_filenames = cPickle.load(f1)
-
-    with open('train_labels.dat', 'r') as f2:  # b for binary
-        train_labels = cPickle.load(f2)
-
-    #train_images_filenames = cPickle.load(open('train_images_filenames.dat','rb'))
-    #train_labels = cPickle.load(open('train_labels.dat','rb'))
-
-    print 'Loaded ' + str(len(train_images_filenames)) + \
-            ' training images filenames with classes ',set(train_labels)
-
-    # Create the detector object
-    detector = create_detector(options.detector_options)
-    
-    # Extract features from train images:
-    D, descriptors_per_image = read_and_extract_features(train_images_filenames, detector, options.detector_options)
-    
-    # Compute the codebook with the features:
-    codebook = compute_codebook(D, options)
-    
-    # Write codebook:
-    # Select the name of the file, depending on the options:
-    if options.use_fisher:
-        codebookname = 'gmm' + str(options.kmeans)
-    else:
-        codebookname = 'codebook' + str(options.kmeans)
-    if options.detector_options.dense_sampling == 1:
-        codebookname = codebookname + '_dense'
-    codebookname = codebookname + '.dat'
-    with open(codebookname, 'w') as f4:  # b for binary
-        cPickle.dump(codebook, f4, cPickle.HIGHEST_PROTOCOL)
-
-    return codebook
-    
 
 ##############################################################################
 def compute_codebook_kmeans(kmeans, D):
@@ -402,229 +192,55 @@ def read_codebook(options):
     with open(codebookname, "r") as input_file:
         codebook = cPickle.load(input_file)
     return codebook
-    
-    
-##############################################################################
-def create_detector(detector_options):
-    # create the detector object
-    if(detector_options.descriptor == 'SIFT'):
-        detector = cv2.SIFT(detector_options.nfeatures)
-    elif (detector_options.descriptor == 'SURF'):   
-        detector = cv2.SURF(detector_options.SURF_hessian_ths)
-    elif (detector_options.descriptor == 'ORB'):   
-        detector = cv2.ORB(detector_options.nfeatures)
-    else: 
-        print 'Error: feature detector not recognized.'
-        sys.stdout.flush()
-        sys.exit()
-    return detector
-    
-
-##############################################################################
-def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_width):
-
-    nr_keypoints = (image_height/step_size)*(image_width/step_size)
-    while not nr_keypoints <= max_nr_keypoints:
-        step_size = step_size - 1
-        if step_size < 1:
-            step_size = 1
-            nr_keypoints = (image_height / step_size) * (image_width / step_size)
-            break
-
-    if step_size < 1:
-        step_size = 1
-
-    kpt = [cv2.KeyPoint(x, y, radius) for y in range(step_size-1, image_height-step_size, step_size)
-                                        for x in range(step_size-1, image_width-step_size, step_size)]
-
-    return kpt
 
 
 ##############################################################################
-def read_and_extract_features(images_filenames, detector, detector_options):
-    # extract keypoints and descriptors
-    # store descriptors in a python list of numpy arrays
+def read_and_extract_features_cnn(images_filenames, cnn, options):
+    # Extract features using a CNN.
+
     descriptors = []
     nimages = len(images_filenames)
-    descriptors_per_image = np.zeros(nimages, dtype=np.uint)
+    progress = 0
     for i in range(nimages):
-        filename = images_filenames[i]
-        print 'Reading image ' + filename
-        ima = cv2.imread(filename)
-        gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        if detector_options.dense_sampling == 1:
-            kpt = dense_sampling(detector_options.dense_sampling_max_nr_keypoints, detector_options.dense_sampling_keypoint_step_size, \
-                                 detector_options.dense_sampling_keypoint_radius, gray.shape[0], gray.shape[1])
-            kpt, des = detector.compute(gray, kpt)
-        else:
-            kpt, des = detector.detectAndCompute(gray,None)
-        descriptors_per_image[i] = len(kpt)
+        if(i * nimages / 100 > progress + 10):
+            progress = 10 * int(round(i * nimages / 10))
+            print str(progress) + '%% completed'
+            
+        # Read and process image:
+        img = image.load_img(images_filenames[i], target_size=(224, 224))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        x = preprocess_input(x)
+        # Extract the features using the CNN:
+        des = cnn.predict(x)
+        # Convert to a one-dimensional array:
+        des = np.ndarray.flatten(des)
+        # Append to list with features of all images:
         descriptors.append(des)
-        print str(descriptors_per_image[i]) + ' extracted keypoints and descriptors'
+    print '100% completed'
     
     # Transform everything to numpy arrays
     size_descriptors = descriptors[0].shape[1]
     D = np.zeros((np.sum([len(p) for p in descriptors]), size_descriptors), dtype=np.float32)
     startingpoint = 0
     for i in range(len(descriptors)):
-        D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
+        D[startingpoint:startingpoint+len(descriptors[i])] = descriptors[i]
         startingpoint += len(descriptors[i])
-            
-    return D, descriptors_per_image
+    
+    return D
     
 
 ##############################################################################
-def extract_visual_words_all(images_filenames, detector, codebook, options, \
-                                    stdSlr_features, pca):
-    # extract keypoints and descriptors
-    # store descriptors in a python list of numpy arrays
-    nimages = len(images_filenames)
-    
-    if options.spatial_pyramids:
-        if options.spatial_pyramids_conf == '2x2':
-            nhistsperlevel = [4**l for l in range(options.spatial_pyramids_depth)]
-        elif options.spatial_pyramids_conf == '2x1':
-            nhistsperlevel = [2**l for l in range(options.spatial_pyramids_depth)]
-        elif options.spatial_pyramids_conf == '3x1':
-            nhistsperlevel = [3**l for l in range(options.spatial_pyramids_depth)]
-        else:
-            print 'Configuratin of spatial pyramid not recognized.'
-            sys.stdout.flush()
-            sys.exit()
-        nwords = sum(nhistsperlevel) * options.kmeans
-    else:
-        nwords = options.kmeans
+def features2words_all(D, options, codebook):
+    # Extract visual words (or Fisher vectors) from features.        
         
+    # From features to words:
     if(options.use_fisher):
-        if(options.apply_pca):
-            nwords = nwords * options.ncomp_pca * 2
-        else:
-            nwords = nwords * 128 * 2
-    
-    visual_words = np.zeros((nimages, nwords), dtype=np.float32)
-    for i in range(nimages):
-        filename = images_filenames[i]
-        print 'Reading image ' + filename
-        ima = cv2.imread(filename)
-        print ima.shape
-        print ima.__class__.__name__
-        print ima.dtype
-        x = np.float32(ima)
-        print x.__class__.__name__
-        print x.shape
-        print x.dtype
-        gray = cv2.cvtColor(ima,cv2.COLOR_BGR2GRAY)
-        if options.spatial_pyramids:
-            visual_words[i,:] = spatial_pyramid(gray, detector, codebook, \
-                                    options, stdSlr_features, pca)
-        else:
-            visual_words[i,:] = extract_visual_words_one(gray, detector, \
-                                    codebook, options, stdSlr_features, pca)
-    return visual_words
-    
-    
-##############################################################################
-def extract_visual_words_one(gray, detector, codebook, options, stdSlr_features, pca):
-    
-    # Extract visual features:
-    if options.detector_options.dense_sampling == 1:
-        kpt = dense_sampling(options.detector_options.dense_sampling_max_nr_keypoints, \
-                    options.detector_options.dense_sampling_keypoint_step_size, \
-                    options.detector_options.dense_sampling_keypoint_radius, gray.shape[0], \
-                    gray.shape[1])
-        kpt, des = detector.compute(gray, kpt)
-        #descriptors_per_image[i] = kpt.__len__()
-        
+        visual_words = predict_fishergmm(codebook, D, options)
     else:
-        kpt, des = detector.detectAndCompute(gray,None)
-    
-    # From features to words or fisher vectors:
-    if not kpt:
-        words = []
-        
-    else:
-        # Scale and apply PCA, if indicated to do so.
-        des = preprocess_apply(des, stdSlr_features, pca, options)
-        
-        # From features to words:
-        if(options.use_fisher):
-            visual_words = predict_fishergmm(codebook, des, options)
-        else:
-            words = codebook.predict(des)
-            visual_words = np.bincount(words,minlength=options.kmeans)
-    
-    return visual_words
-    
-
-##############################################################################
-def spatial_pyramid(gray, detector, codebook, options, stdSlr_features, pca):
-    
-    height, width = gray.shape
-    
-    visual_words = []
-    
-    if(options.spatial_pyramids_conf == '2x2'):
-        
-        for level in range(options.spatial_pyramids_depth):
-            deltai = height / (2**level)
-            deltaj = width / (2**level)
-            for i in range(2**level):
-                for j in range(2**level):
-                    im = gray[i*deltai : (i+1)*deltai, j*deltaj : (j+1)*deltaj]
-                    visual_words_im = extract_visual_words_one(im, detector, codebook, \
-                            options, stdSlr_features, pca)
-                    if(options.spatial_pyramid_kernel):
-                        L = options.spatial_pyramids_depth - 1;
-                        if(level == 0): #the coarsest level
-                            weight = 2**(-L)
-                            visual_words_im = np.multiply(visual_words_im, weight)
-                        else:
-                            weight = 2**(-(L-level+1))
-                            visual_words_im = np.multiply(visual_words_im, weight)
-                    visual_words.extend(visual_words_im)        
-                        
-                    
-    elif(options.spatial_pyramids_conf == '2x1'):
-        for level in range(options.spatial_pyramids_depth):
-            deltai = height / (2**level)
-            for i in range(2**level):
-                im = gray[i*deltai : (i+1)*deltai, :]
-                visual_words_im = extract_visual_words_one(im, detector, codebook, \
-                        options, stdSlr_features, pca)
-                if(options.spatial_pyramid_kernel):
-                        L = options.spatial_pyramids_depth - 1;
-                        if(level == 0): #the coarsest level
-                            weight = 2**(-L)
-                            visual_words_im = np.multiply(visual_words_im, weight)
-                        else:
-                            weight = 2**(-(L-level+1))
-                            visual_words_im = np.multiply(visual_words_im, weight)
-                    
-                visual_words.extend(visual_words_im)
-                    
-    elif(options.spatial_pyramids_conf == '3x1'):
-        for level in range(options.spatial_pyramids_depth):
-            deltai = height / (3**level)
-            for i in range(3**level):
-                im = gray[i*deltai : (i+1)*deltai, :]
-                visual_words_im = extract_visual_words_one(im, detector, codebook, \
-                        options, stdSlr_features, pca)
-                if(options.spatial_pyramid_kernel):
-                        L = options.spatial_pyramids_depth - 1;
-                        if(level == 0): #the coarsest level
-                            weight = 2**(-L)
-                            visual_words_im = np.multiply(visual_words_im, weight)
-                        else:
-                            weight = 2**(-(L-level+1))
-                            visual_words_im = np.multiply(visual_words_im, weight)
-                
-                visual_words.extend(visual_words_im)
-        
-    else:
-        print 'Configuratin of spatial pyramid not recognized.'
-        sys.stdout.flush()
-        sys.exit()
-                
+        visual_words = codebook.predict(D)
+        visual_words = np.bincount(visual_words, minlength=options.kmeans)
+                                    
     return visual_words
         
     
@@ -810,31 +426,21 @@ def compute_and_save_precision_recall_curve(binary_labels, predicted_score, \
     
     
 ##############################################################################
-def preprocess_and_codebook(train_images_filenames, detector, options):
-    # Fit the scaler and the PCA, apply them, and compute the codebook.
-    
-    if options.compute_codebook:
-        # Extract features from train images:
-        D, descriptors_per_image = read_and_extract_features(train_images_filenames, \
-                    detector, options.detector_options)
-        # Fit scaler and PCA:
-        stdSlr_features, pca = preprocess_fit(D, options)
-        # Apply scaler and PCA:
-        D = preprocess_apply(D, stdSlr_features, pca, options)
-        # Compute codebook:
-        codebook = compute_codebook(D, options)
-        
-    else:
-        if options.apply_pca or options.scale_features:
-            print 'Error: If applying scale or PCA, codebook must be computed.'
-            print 'Please, switch to 1 option compute_codebook.'
-            sys.stdout.flush()
-            sys.exit()
-        stdSlr_features = []
-        pca = []
-        codebook = read_codebook(options)
-    
-    return codebook, stdSlr_features, pca
+def preprocess_train(D, options):
+    # Fit the scaler and the PCA with the training features.
+    # Also, give back the features already preprocessed.
+    stdSlr_features = StandardScaler()
+    if(options.scale_features == 1):
+        stdSlr_features = StandardScaler().fit(D)
+        D = stdSlr_features.transform(D)
+    pca = PCA(n_components = options.ncomp_pca)
+    if(options.apply_pca == 1):
+        print "Fitting principal components analysis..."
+        pca.fit(D)
+        D = pca.transform(D)
+        print "Explained variance with ", options.ncomp_pca , \
+            " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
+    return D, stdSlr_features, pca
     
     
 ##############################################################################
@@ -866,28 +472,32 @@ def preprocess_apply(D, stdSlr_features, pca, options):
 
 
 ##############################################################################
-def train_system(train_images_filenames, train_labels, detector, options):
+def train_system_cnn(images_filenames, labels, cnn, options):
     # Train the system with the training data.
 
-    # Get the codebook, and, if indicated so, fit the scaler and the PCA:
-    codebook, stdSlr_features, pca = \
-        preprocess_and_codebook(train_images_filenames, detector, options)
+    # Extract features from all images:
+    D = read_and_extract_features_cnn(images_filenames, cnn, options)
     
-    # Extract the visual words from the train images:
-    train_visual_words = extract_visual_words_all(train_images_filenames, \
-                                detector, codebook, options, stdSlr_features, pca)
+    # Scale and apply PCA:
+    D, stdSlr_features, pca = preprocess_train(D, options)
+                           
+    # Compute or read the codebook:
+    if options.compute_codebook:
+        codebook = compute_codebook(D, options)
+    else:
+        codebook = read_codebook(options) 
+    
+    # Extract visual words or Fisher vectors:
+    visual_words, codebook = features2words_all(D, codebook, options)
     
     # Fit scaler for words:
-    stdSlr_VW = StandardScaler().fit(train_visual_words)
-    
+    stdSlr_VW = StandardScaler().fit(visual_words)
     # Scale words:
-    train_visual_words_scaled = stdSlr_VW.transform(train_visual_words)
+    if(options.SVM_options.kernel != 'histogramIntersection'):
+        visual_words = stdSlr_VW.transform(visual_words)
     
-    #don't apply scale when the kernel is histogramIntersection
-    if(options.SVM_options.kernel == 'histogramIntersection'):
-        train_visual_words_scaled = train_visual_words
     # Train the classifier:
-    clf = train_classifier(train_visual_words_scaled, train_labels, options)
+    clf = train_classifier(visual_words, labels, options)
     
     return clf, codebook, stdSlr_VW, stdSlr_features, pca
 
@@ -906,32 +516,33 @@ def train_system_nocompute(train_visual_words, train_labels, detector, codebook,
     clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
     return clf, stdSlr_VW
-    
-    
+
+
 ##############################################################################
-def test_system(test_images_filenames, test_labels, detector, codebook, clf, \
-                                stdSlr_VW, stdSlr_features, pca, options):
-    # Measure the performance of the system with the test set.    
+def test_system_cnn(images_filenames, labels, cnn, codebook, clf, \
+                        stdSlr_VW, stdSlr_features, pca, options):
+    # Measure the performance of the system with the test set. 
+
+    # Extract features from all images:
+    D = read_and_extract_features_cnn(images_filenames, cnn, options)
     
-    # Extract the visual words from the test images:
-    test_visual_words = extract_visual_words_all(test_images_filenames, detector,\
-                                            codebook, options, stdSlr_features, pca)
+    # Scale and apply PCA:
+    D = preprocess_apply(D, stdSlr_features, pca, options)
+    
+    # Extract visual words or Fisher vectors:
+    visual_words = features2words_all(D, codebook, options)
     
     # Scale words:
-    test_visual_words_scaled = stdSlr_VW.transform(test_visual_words)
-    
-    #don't apply scale when the kernel is histogramIntersection
-    if(options.SVM_options.kernel == 'histogramIntersection'):
-        test_visual_words_scaled = test_visual_words
-        #test_visual_words_scaled = test_visual_words / test_visual_words.max()
+    if(options.SVM_options.kernel != 'histogramIntersection'):
+        visual_words = stdSlr_VW.transform(visual_words)
     
     # Compute the accuracy:
-    accuracy = 100 * clf.score(test_visual_words_scaled, test_labels)
+    accuracy = 100 * clf.score(visual_words, labels)
     
-    # Only if pass a valid file descriptor
+    # Only if pass a valid file descriptor:
     if options.compute_evaluation == 1:
-        final_issues(test_visual_words_scaled, test_labels, clf, options)
-
+        final_issues(visual_words, labels, clf, options)
+    
     return accuracy
     
     
@@ -1055,3 +666,4 @@ class general_options_class:
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
     use_fisher = 0 # Use fisher vectors.
+    features_from_cnn = 1 # Use a Convolutional Neural Network to extract the visual features.

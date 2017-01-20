@@ -19,17 +19,44 @@ from sklearn.metrics import average_precision_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from keras.preprocessing import image
+from keras.applications.vgg19 import preprocess_input
 
-# Functions that need yael library. If running Linux, use the two first,
-# and comment the other two. With Windows, the other way round, comment
-# the two first, and use the two last lines. In this case, it is not
-# possible to use Fisher Vectors.
-# Tools for Linux:
-#from tools_yael import predict_fishergmm
-#from tools_yael import compute_codebook_gmm
-# Tools for Windows:
-from tools_yael_fake import predict_fishergmm
-from tools_yael_fake import compute_codebook_gmm
+sys.path.append('.')
+from tools_yael import predict_fishergmm
+from tools_yael import compute_codebook_gmm
+
+
+##############################################################################
+def main_cnn(options):
+    start = time.time()
+    
+    # Read the train and test files
+    train_images_filenames, \
+        test_images_filenames, \
+        train_labels, \
+        test_labels = read_dataset(options)
+    
+    print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
+    print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
+    
+    # Create the detector object
+    detector = create_detector(options.detector_options)
+        
+    clf, codebook, stdSlr_VW, stdSlr_features, pca = \
+            train_system_cnn(train_images_filenames, train_labels, \
+                                detector, options)
+    
+    accuracy = test_system_cnn(test_images_filenames, test_labels, \
+                                detector, codebook, clf, stdSlr_VW, \
+                                stdSlr_features, pca, options)
+    
+    end=time.time()
+    running_time = end-start
+    print 'Accuracy: ' + str(accuracy) + '%'
+    print 'Done in '+str(running_time)+' secs.'
+    
+    return accuracy, running_time
 
 
 ##############################################################################
@@ -441,6 +468,42 @@ def dense_sampling(max_nr_keypoints, step_size, radius, image_height, image_widt
 
 
 ##############################################################################
+def read_and_extract_features_cnn(images_filenames, cnn, options):
+    # Extract features using a CNN.
+
+    descriptors = []
+    nimages = len(images_filenames)
+    progress = 0
+    for i in range(nimages):
+        if(i * nimages / 100 > progress + 10):
+            progress = 10 * int(round(i * nimages / 10))
+            print str(progress) + '%% completed'
+            
+        # Read and process image:
+        img = image.load_img(images_filenames[i], target_size=(224, 224))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        x = preprocess_input(x)
+        # Extract the features using the CNN:
+        des = cnn.predict(x)
+        # Convert to a one-dimensional array:
+        des = np.ndarray.flatten(des)
+        # Append to list with features of all images:
+        descriptors.append(des)
+    print '100% completed'
+    
+    # Transform everything to numpy arrays
+    size_descriptors = descriptors[0].shape[1]
+    D = np.zeros((np.sum([len(p) for p in descriptors]), size_descriptors), dtype=np.float32)
+    startingpoint = 0
+    for i in range(len(descriptors)):
+        D[startingpoint:startingpoint+len(descriptors[i])] = descriptors[i]
+        startingpoint += len(descriptors[i])
+    
+    return D
+
+
+##############################################################################
 def read_and_extract_features(images_filenames, detector, detector_options):
     # extract keypoints and descriptors
     # store descriptors in a python list of numpy arrays
@@ -471,6 +534,20 @@ def read_and_extract_features(images_filenames, detector, detector_options):
         startingpoint += len(descriptors[i])
             
     return D, descriptors_per_image
+    
+
+##############################################################################
+def features2words_all(D, options, codebook):
+    # Extract visual words (or Fisher vectors) from features.        
+        
+    # From features to words:
+    if(options.use_fisher):
+        visual_words = predict_fishergmm(codebook, D, options)
+    else:
+        visual_words = codebook.predict(D)
+        visual_words = np.bincount(visual_words, minlength=options.kmeans)
+                                    
+    return visual_words
     
 
 ##############################################################################
@@ -838,6 +915,24 @@ def preprocess_and_codebook(train_images_filenames, detector, options):
     
     
 ##############################################################################
+def preprocess_train(D, options):
+    # Fit the scaler and the PCA with the training features.
+    # Also, give back the features already preprocessed.
+    stdSlr_features = StandardScaler()
+    if(options.scale_features == 1):
+        stdSlr_features = StandardScaler().fit(D)
+        D = stdSlr_features.transform(D)
+    pca = PCA(n_components = options.ncomp_pca)
+    if(options.apply_pca == 1):
+        print "Fitting principal components analysis..."
+        pca.fit(D)
+        D = pca.transform(D)
+        print "Explained variance with ", options.ncomp_pca , \
+            " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
+    return D, stdSlr_features, pca
+    
+    
+##############################################################################
 def preprocess_fit(D, options):
     # Fit the scaler and the PCA with the training features.
     stdSlr_features = StandardScaler()
@@ -863,6 +958,37 @@ def preprocess_apply(D, stdSlr_features, pca, options):
     if(options.apply_pca == 1):
         D = pca.transform(D)
     return D
+
+
+##############################################################################
+def train_system_cnn(images_filenames, labels, cnn, options):
+    # Train the system with the training data.
+
+    # Extract features from all images:
+    D = read_and_extract_features_cnn(images_filenames, cnn, options)
+    
+    # Scale and apply PCA:
+    D, stdSlr_features, pca = preprocess_train(D, options)
+                           
+    # Compute or read the codebook:
+    if options.compute_codebook:
+        codebook = compute_codebook(D, options)
+    else:
+        codebook = read_codebook(options) 
+    
+    # Extract visual words or Fisher vectors:
+    visual_words, codebook = features2words_all(D, codebook, options)
+    
+    # Fit scaler for words:
+    stdSlr_VW = StandardScaler().fit(visual_words)
+    # Scale words:
+    if(options.SVM_options.kernel != 'histogramIntersection'):
+        visual_words = stdSlr_VW.transform(visual_words)
+    
+    # Train the classifier:
+    clf = train_classifier(visual_words, labels, options)
+    
+    return clf, codebook, stdSlr_VW, stdSlr_features, pca
 
 
 ##############################################################################
@@ -906,6 +1032,34 @@ def train_system_nocompute(train_visual_words, train_labels, detector, codebook,
     clf = train_classifier(train_visual_words_scaled, train_labels, options)
     
     return clf, stdSlr_VW
+
+
+##############################################################################
+def test_system_cnn(images_filenames, labels, cnn, codebook, clf, \
+                        stdSlr_VW, stdSlr_features, pca, options):
+    # Measure the performance of the system with the test set. 
+
+    # Extract features from all images:
+    D = read_and_extract_features_cnn(images_filenames, cnn, options)
+    
+    # Scale and apply PCA:
+    D = preprocess_apply(D, stdSlr_features, pca, options)
+    
+    # Extract visual words or Fisher vectors:
+    visual_words = features2words_all(D, codebook, options)
+    
+    # Scale words:
+    if(options.SVM_options.kernel != 'histogramIntersection'):
+        visual_words = stdSlr_VW.transform(visual_words)
+    
+    # Compute the accuracy:
+    accuracy = 100 * clf.score(visual_words, labels)
+    
+    # Only if pass a valid file descriptor:
+    if options.compute_evaluation == 1:
+        final_issues(visual_words, labels, clf, options)
+    
+    return accuracy
     
     
 ##############################################################################
@@ -1055,3 +1209,4 @@ class general_options_class:
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
     use_fisher = 0 # Use fisher vectors.
+    features_from_cnn = 1 # Use a Convolutional Neural Network to extract the visual features.
