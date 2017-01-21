@@ -2,7 +2,6 @@ from keras.applications.vgg16 import VGG16
 from keras.preprocessing import image
 from keras.applications.vgg19 import preprocess_input
 from keras.models import Model
-from keras import backend as K
 from keras.utils.visualize_util import plot
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,19 +20,19 @@ model = Model(input=base_model.input, output=base_model.get_layer('block5_conv2'
 #get the features from images
 features = model.predict(x)
 
-#if K.image_dim_ordering() == 'th':
-    #theano and thensorflow deal with tensor in different order
-
 weights = base_model.get_layer('block1_conv1').get_weights()
 
 weights = weights[0]
-weights_fig = np.zeros((3,3,3))
+weights_fig = np.zeros((24,24,3))
+
 for b in range(0, weights.shape[0]):
-  for h in range(0, weights.shape[1]):
-    for w in range(0, weights.shape[2]):
-      weights_fig[h,w,b] = np.sum(weights[b,h,w])
+  c = 0
+  for h in range(0, weights_fig.shape[0],weights.shape[1]):
+    for w in range(0, weights_fig.shape[1],weights.shape[2]):
+      weights_fig[h:h+weights.shape[1],w:w+weights.shape[2],b] = weights[b,:,:,c]
+      c = c + 1
 
 plt.figure()
-plt.imshow(weights_fig)
+plt.imshow(weights_fig, interpolation="nearest")
 plt.title('block1_conv1 Weights')
 plt.savefig('block1_conv1_weights.png', bbox_inches='tight')
