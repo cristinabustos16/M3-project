@@ -58,6 +58,8 @@ options.SVM_options.probability = 1
 
 # Evaluation options:
 options.compute_evaluation = 0
+
+# Classify output of FC layers (SVM), or use BoVW (BoW):
 options.system = 'SVM'
 
 #######################################################

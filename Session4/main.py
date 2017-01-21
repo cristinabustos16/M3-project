@@ -29,10 +29,6 @@ options.SVM_options.degree = 3
 options.SVM_options.coef0 = 0
 options.SVM_options.probability = 1
 
-# Random Forest options:
-
-# Adaboost options:
-
 # Evaluation options:
 options.compute_evaluation = 0
 options.save_plots = 0
@@ -40,9 +36,10 @@ options.file_name = 'test_kernel_'
 options.show_plots = 1
 
 # Reduce dataset?
-options.reduce_dataset = 1
+options.reduce_dataset = 0
 
-options.system = 'SVM'
+# Classify output of FC layers (SVM), or use BoW (BoW):
+options.system = 'BoW'
 
 
 #######################################################

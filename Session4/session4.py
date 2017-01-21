@@ -24,8 +24,8 @@ from keras.applications.vgg16 import VGG16
 from keras.models import Model
 
 sys.path.append('.')
-from tools_yael_fake import predict_fishergmm
-from tools_yael_fake import compute_codebook_gmm
+from tools_yael import predict_fishergmm
+from tools_yael import compute_codebook_gmm
 
 ##############################################################################
 def main_cnn_SVM(options):
@@ -247,9 +247,9 @@ def read_and_extract_features_cnn_SVM(images_filenames, cnn):
     size_features = descriptors[0].shape[1] # Length of each feature (depth of the convolutional layer).
     D = np.zeros((nimages * nfeatures_img[i], size_features), dtype=np.float32)
     startingpoint = 0
-    for i in range(len(descriptors)):
-        D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
-        startingpoint += len(descriptors[i])
+    for i in range(nimages):
+        D[startingpoint:startingpoint+nfeatures_img[i]] = descriptors[i]
+        startingpoint += nfeatures_img[i]
     
     return D, nfeatures_img
     
@@ -288,10 +288,11 @@ def read_and_extract_features_cnn(images_filenames, cnn):
     # Transform everything to numpy arrays
     size_features = descriptors[0].shape[1] # Length of each feature (depth of the convolutional layer).
     D = np.zeros((nimages * nfeatures_img[i], size_features), dtype=np.float32)
-    startingpoint = 0
-    for i in range(len(descriptors)):
-        D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
-        startingpoint += len(descriptors[i])
+    idx_fin = 0
+    for i in range(nimages):
+        idx_ini = idx_fin
+        idx_fin = idx_ini + nfeatures_img[i]
+        D[idx_ini:idx_fin,:] = descriptors[i]
     
     return D, nfeatures_img
     
@@ -384,12 +385,6 @@ def train_adaboost(X, L, adaboost_options):
 def train_SVM(X, L, SVM_options):
 # Train the SVM, given some options and the training data.
     print 'Training the SVM classifier...'
-    
-    print X.__class__.__name__
-    print X.shape
-    print L.__class__.__name__
-    print len(L)
-    
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
         clf = svm.SVC(kernel='linear', C = SVM_options.C, \
@@ -647,7 +642,7 @@ def test_system_cnn(images_filenames, labels, cnn, codebook, clf, \
     nimages = len(images_filenames)
 
     # Extract features from all images:
-    D, nfeatures_img = read_and_extract_features_cnn_SVM(images_filenames, cnn)
+    D, nfeatures_img = read_and_extract_features_cnn(images_filenames, cnn)
     
     # Scale and apply PCA:
     D = preprocess_apply(D, stdSlr_features, pca, options)
