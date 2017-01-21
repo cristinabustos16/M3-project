@@ -1,6 +1,6 @@
 # Executable program.
-from session4_reduced import general_options_class
-from session4_reduced import main_cnn
+from session4 import general_options_class
+from session4 import main_cnn
 
 # Select options:
 options = general_options_class()
