@@ -23,7 +23,7 @@ features = model.predict(x)
 features_3d = features[0][:]
 
 #get rid of the third dimension
-option = 'pp' # 'maximum' 'average'
+option = 'average' # 'maximum' 'average'
 
 if (option == 'average'):
     features_to_show=np.zeros((features_3d.shape[0],features_3d.shape[1]))
@@ -31,17 +31,21 @@ if (option == 'average'):
         features_to_show[:,:] = features_to_show[:,:] +  features_3d[:,:,p] 
     #average
     features_to_show = features_to_show/features_3d.shape[2];    
+    plt.figure()
+    plt.imshow(features_to_show)
+    plt.title('block3_conv2 Features using Avarage')
+    plt.savefig('block3_conv2_features_avg.png', bbox_inches='tight')
 elif(option == 'maximum'):
     features_to_show=np.zeros((features_3d.shape[0],features_3d.shape[1]))
     for w in range(0,features_3d.shape[0]):
         for h in range(0,features_3d.shape[1]):
             features_to_show[w][h] = np.amax(features_3d[w,h,:])
+    plt.figure()
+    plt.imshow(features_to_show)
+    plt.title('block3_conv2 Features using Maximun')
+    plt.savefig('block3_conv2_features_max.png', bbox_inches='tight')
 else:
     print 'option not recognized'     
 
-plt.figure()
-plt.imshow(features_to_show)
-plt.title('block3_conv2 Features')
-plt.savefig('block3_conv2_features.png', bbox_inches='tight')
 
 #weights = base_model.get_layer('block1_conv1').get_weights()
