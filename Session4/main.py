@@ -1,6 +1,7 @@
 # Executable program.
 from session4 import general_options_class
 from session4 import main_cnn
+from session4 import main_cnn_SVM
 
 # Select options:
 options = general_options_class()
@@ -41,11 +42,16 @@ options.show_plots = 1
 # Reduce dataset?
 options.reduce_dataset = 1
 
+options.system = 'SVM'
+
 
 #######################################################
 
 # Call the main program:
-accuracy, running_time = main_cnn(options)
+if options.system == 'SVM':
+    accuracy, running_time = main_cnn_SVM(options)
+elif options.system == 'BoW':
+    accuracy, running_time = main_cnn(options)
 
 
 

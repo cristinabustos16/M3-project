@@ -27,6 +27,29 @@ sys.path.append('.')
 from tools_yael_fake import predict_fishergmm
 from tools_yael_fake import compute_codebook_gmm
 
+##############################################################################
+def main_cnn_SVM(options):
+    start = time.time()
+    
+    # Read the train and test files
+    train_images_filenames, \
+        test_images_filenames, \
+        train_labels, \
+        test_labels = read_dataset(options)
+    
+    print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
+    print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
+    
+    cnn, clf, stdSlr, pca = train_system_cnn_SVM(train_images_filenames, train_labels, options)
+    
+    accuracy = test_system_cnn_SVM(test_images_filenames, test_labels, cnn, stdSlr, pca, clf, options)
+
+    end=time.time()
+    running_time = end-start
+    print 'Accuracy: ' + str(accuracy) + '%'
+    print 'Done in '+str(running_time)+' secs.'
+    
+    return accuracy, running_time
 
 ##############################################################################
 def main_cnn(options):
@@ -41,15 +64,11 @@ def main_cnn(options):
     print 'Loaded '+str(len(train_images_filenames))+' training images filenames with classes ',set(train_labels)
     print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
     
-    # Create the CNN:
-    detector = create_cnn()
-        
-    clf, codebook, stdSlr_VW, stdSlr_features, pca = \
-            train_system_cnn(train_images_filenames, train_labels, \
-                                detector, options)
+    cnn, clf, codebook, stdSlr_VW, stdSlr_features, pca = \
+            train_system_cnn(train_images_filenames, train_labels,  options)
     
     accuracy = test_system_cnn(test_images_filenames, test_labels, \
-                                detector, codebook, clf, stdSlr_VW, \
+                                cnn, codebook, clf, stdSlr_VW, \
                                 stdSlr_features, pca, options)
     
     end=time.time()
@@ -59,12 +78,12 @@ def main_cnn(options):
     
     return accuracy, running_time
     
-    
-def create_cnn():
+##############################################################################   
+def create_cnn(layer):
     # Load VGG model
     base_model = VGG16(weights='imagenet')
     # Crop the network:
-    cnn = Model(input=base_model.input, output=base_model.get_layer('block5_conv2').output)
+    cnn = Model(input=base_model.input, output=base_model.get_layer(layer).output)
     return cnn
 
 
@@ -193,9 +212,49 @@ def read_codebook(options):
         codebook = cPickle.load(input_file)
     return codebook
 
-
 ##############################################################################
-def read_and_extract_features_cnn(images_filenames, cnn, options):
+def read_and_extract_features_cnn_SVM(images_filenames, cnn):
+    # Extract features using a CNN.
+
+    descriptors = []
+    nimages = len(images_filenames)
+    nfeatures_img = np.zeros(nimages, dtype=np.uint)
+    print 'Extracting features with CNN...'
+    sys.stdout.flush()
+    progress = 0
+    for i in range(nimages):
+        if(np.float32(i) / nimages * 100 > progress + 10):
+            progress = 10 * int(round(np.float32(i) / nimages * 10))
+            print str(progress) + '% completed'
+            sys.stdout.flush()
+            
+        # Read and process image:
+        img = image.load_img(images_filenames[i], target_size=(224, 224))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        x = preprocess_input(x)
+        # Extract the features using the CNN:
+        des = cnn.predict(x)
+
+        # Append to list with features of all images:
+        descriptors.append(des)
+        # # Number of features per image (height times with of the convolutional layer):
+        nfeatures_img[i] = len(des)
+    print '100% completed'
+    sys.stdout.flush()
+    
+    # Transform everything to numpy arrays
+    size_features = descriptors[0].shape[1] # Length of each feature (depth of the convolutional layer).
+    D = np.zeros((nimages * nfeatures_img[i], size_features), dtype=np.float32)
+    startingpoint = 0
+    for i in range(len(descriptors)):
+        D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
+        startingpoint += len(descriptors[i])
+    
+    return D, nfeatures_img
+    
+##############################################################################
+def read_and_extract_features_cnn(images_filenames, cnn):
     # Extract features using a CNN.
 
     descriptors = []
@@ -515,13 +574,15 @@ def preprocess_apply(D, stdSlr_features, pca, options):
 
 
 ##############################################################################
-def train_system_cnn(images_filenames, labels, cnn, options):
+def train_system_cnn(images_filenames, labels, options):
     # Train the system with the training data.
-                        
     nimages = len(images_filenames)
+                        
+    # Create the CNN:
+    cnn = create_cnn('block5_conv2')
 
     # Extract features from all images:
-    D, nfeatures_img = read_and_extract_features_cnn(images_filenames, cnn, options)
+    D, nfeatures_img = read_and_extract_features_cnn(images_filenames, cnn)
     
     # Scale and apply PCA:
     D, stdSlr_features, pca = preprocess_train(D, options)
@@ -544,18 +605,49 @@ def train_system_cnn(images_filenames, labels, cnn, options):
     # Train the classifier:
     clf = train_classifier(visual_words, labels, options)
     
-    return clf, codebook, stdSlr_VW, stdSlr_features, pca
+    return cnn, clf, codebook, stdSlr_VW, stdSlr_features, pca
+ 
+##############################################################################
+def train_system_cnn_SVM(images_filenames, labels, options):
+    nimages = len(images_filenames)
+    
+    # create the cnn
+    cnn = create_cnn('fc2')
+        
+    # read the CNN features from last FC layer
+    D, nfeatures_img = read_and_extract_features_cnn_SVM(images_filenames, cnn)
+
+    # Scale input data, and keep the scaler for later:
+    stdSlr = StandardScaler().fit(D)
+    D = stdSlr.transform(D)
+
+    # PCA:
+    pca = PCA(n_components = options.ncomp_pca)
+    print "Applying principal components analysis..."
+    pca.fit(D)
+    D = pca.transform(D)
+    
+    descriptors = np.zeros((nimages, options.ncomp_pca), dtype=np.float32)
+    idx_fin = 0
+    for i in range(nimages):
+        idx_ini = idx_fin
+        idx_fin = idx_ini + nfeatures_img[i]
+        descriptors[i,:] = D[idx_ini:idx_fin,:]
+
+    # Train a linear SVM classifier
+    clf = train_classifier(descriptors, labels, options)
+    
+    return cnn, clf, stdSlr, pca
 
 
 ##############################################################################
 def test_system_cnn(images_filenames, labels, cnn, codebook, clf, \
                         stdSlr_VW, stdSlr_features, pca, options):
     # Measure the performance of the system with the test set. 
-                        
     nimages = len(images_filenames)
 
     # Extract features from all images:
-    D, nfeatures_img = read_and_extract_features_cnn(images_filenames, cnn, options)
+    D, nfeatures_img = read_and_extract_features_cnn_SVM(images_filenames, cnn)
     
     # Scale and apply PCA:
     D = preprocess_apply(D, stdSlr_features, pca, options)
@@ -573,6 +665,35 @@ def test_system_cnn(images_filenames, labels, cnn, codebook, clf, \
     # Only if pass a valid file descriptor:
     if options.compute_evaluation == 1:
         final_issues(visual_words, labels, clf, options)
+    
+    return accuracy
+
+#############################################################################
+def test_system_cnn_SVM(images_filenames, labels, cnn, stdSlr, pca, clf, options):
+    nimages = len(images_filenames)
+    
+    # Extract features from all images:
+    D, nfeatures_img = read_and_extract_features_cnn_SVM(images_filenames, cnn)
+    
+    # Scale input data, and keep the scaler for later:
+    D = stdSlr.transform(D)
+    
+    # Scale and apply PCA:
+    D = pca.transform(D)
+    
+    descriptors = np.zeros((nimages, options.ncomp_pca), dtype=np.float32)
+    idx_fin = 0
+    for i in range(nimages):
+        idx_ini = idx_fin
+        idx_fin = idx_ini + nfeatures_img[i]
+        descriptors[i,:] = D[idx_ini:idx_fin,:]
+
+    # Compute the accuracy:
+    accuracy = 100 * clf.score(descriptors,labels)
+    
+    # Only if pass a valid file descriptor:
+    if options.compute_evaluation == 1:
+        final_issues(descriptors, labels, clf, options)
     
     return accuracy
     
@@ -680,3 +801,4 @@ class general_options_class:
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
     use_fisher = 0 # Use fisher vectors.
     features_from_cnn = 1 # Use a Convolutional Neural Network to extract the visual features.
+    system = 'SVM' #Select the system to apply (SVM, BoW, FV)
