@@ -26,9 +26,18 @@ plot(model2, to_file='model2.png', show_shapes=True, show_layer_names=True)
 features1 = model1.predict(x)
 features2 = model1.predict(x)
 
-print features1.__class__.__name__
-print len(features1)
 print features1.shape
 
-print sum(sum(sum(sum(features1))))
-print sum(sum(sum(sum(features2))))
+x = np.reshape(features1, (features1.shape[1] * features1.shape[2], features1.shape[3]))
+
+print x.shape
+
+for i in range(features1.shape[1]):
+    for j in range(features1.shape[2]):
+        a = features1[0, i, j, :]
+        b = x[i*features1.shape[2] + j]
+        z = abs(a-b)
+        print sum(z)
+
+
+
