@@ -20,12 +20,10 @@ model = Model(input=base_model.input, output=base_model.get_layer('block3_conv2'
 #get the features from images
 features = model.predict(x)
 
-
-features = model.predict(x)
 features_3d = features[0][:]
 
 #get rid of the third dimension
-option = 'average' # 'maximum'
+option = 'pp' # 'maximum' 'average'
 
 if (option == 'average'):
     features_to_show=np.zeros((features_3d.shape[0],features_3d.shape[1]))
@@ -34,7 +32,10 @@ if (option == 'average'):
     #average
     features_to_show = features_to_show/features_3d.shape[2];    
 elif(option == 'maximum'):
-    print 'maximum'
+    features_to_show=np.zeros((features_3d.shape[0],features_3d.shape[1]))
+    for w in range(0,features_3d.shape[0]):
+        for h in range(0,features_3d.shape[1]):
+            features_to_show[w][h] = np.amax(features_3d[w,h,:])
 else:
     print 'option not recognized'     
 
