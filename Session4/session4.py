@@ -609,7 +609,6 @@ def train_system_cnn(images_filenames, labels, cnn, options):
  
 ##############################################################################
 def train_system_cnn_SVM(images_filenames, labels, options):
-    nimages = len(images_filenames)
     
     # create the cnn
     cnn = create_cnn('fc2')
@@ -621,11 +620,12 @@ def train_system_cnn_SVM(images_filenames, labels, options):
     stdSlr = StandardScaler().fit(D)
     D = stdSlr.transform(D)
 
-    # PCA:
+    # Apply PCA:
     pca = PCA(n_components = options.ncomp_pca)
-    #print "Applying principal components analysis..."
-    #pca.fit(D)
-    #D = pca.transform(D)
+    if options.apply_pca:
+        print "Applying principal components analysis..."
+        pca.fit(D)
+        D = pca.transform(D)
 
     # Train a linear SVM classifier
     clf = train_classifier(D, labels, options)
@@ -664,7 +664,6 @@ def test_system_cnn(images_filenames, labels, cnn, codebook, clf, \
 
 #############################################################################
 def test_system_cnn_SVM(images_filenames, labels, cnn, stdSlr, pca, clf, options):
-    nimages = len(images_filenames)
     
     # Extract features from all images:
     D, nfeatures_img = read_and_extract_features_cnn_SVM(images_filenames, cnn)
@@ -672,15 +671,16 @@ def test_system_cnn_SVM(images_filenames, labels, cnn, stdSlr, pca, clf, options
     # Scale input data, and keep the scaler for later:
     D = stdSlr.transform(D)
     
-    # Scale and apply PCA:
-    #D = pca.transform(D)
+    # Apply PCA:
+    if options.apply_pca:
+        D = pca.transform(D)
 
     # Compute the accuracy:
     accuracy = 100 * clf.score(D,labels)
     
     # Only if pass a valid file descriptor:
     if options.compute_evaluation == 1:
-        final_issues(descriptors, labels, clf, options)
+        final_issues(D, labels, clf, options)
     
     return accuracy
     
