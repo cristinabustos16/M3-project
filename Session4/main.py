@@ -34,8 +34,8 @@ options.SVM_options.probability = 1
 # Adaboost options:
 
 # Evaluation options:
-options.compute_evaluation = 0
-options.save_plots = 0
+options.compute_evaluation = 1
+options.save_plots = 1
 options.file_name = 'test_kernel_'
 options.show_plots = 1
 
