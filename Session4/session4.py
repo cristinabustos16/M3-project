@@ -248,11 +248,13 @@ def read_and_extract_features_cnn_SVM(images_filenames, cnn):
     
     # Transform everything to numpy arrays
     size_features = descriptors[0].shape[1] # Length of each feature (depth of the convolutional layer).
-    D = np.zeros((nimages * nfeatures_img[i], size_features), dtype=np.float32)
-    startingpoint = 0
-    for i in range(len(descriptors)):
-        D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
-        startingpoint += len(descriptors[i])
+    index_D = np.int(nimages * nfeatures_img[i])
+    D = np.zeros((index_D, size_features), dtype=np.float32)
+    idx_fin = 0
+    for i in range(nimages):
+        idx_ini = idx_fin
+        idx_fin = idx_ini + int(nfeatures_img[i])
+        D[idx_ini:idx_fin,:] = descriptors[i]
     return D, nfeatures_img
     
 ##############################################################################
@@ -289,11 +291,13 @@ def read_and_extract_features_cnn(images_filenames, cnn):
     
     # Transform everything to numpy arrays
     size_features = descriptors[0].shape[1] # Length of each feature (depth of the convolutional layer).
-    D = np.zeros((nimages * nfeatures_img[i], size_features), dtype=np.float32)
-    startingpoint = 0
-    for i in range(len(descriptors)):
-        D[startingpoint:startingpoint+len(descriptors[i])]=descriptors[i]
-        startingpoint += len(descriptors[i])
+    index_D = np.int(nimages * nfeatures_img[i])
+    D = np.zeros((index_D, size_features), dtype=np.float32)
+    idx_fin = 0
+    for i in range(nimages):
+        idx_ini = idx_fin
+        idx_fin = idx_ini + int(nfeatures_img[i])
+        D[idx_ini:idx_fin,:] = descriptors[i]
     
     return D, nfeatures_img
     
@@ -329,7 +333,7 @@ def features2words_all(D, codebook, options, nimages, nfeatures_img):
     idx_fin = 0
     for i in range(nimages):
         idx_ini = idx_fin
-        idx_fin = idx_ini + nfeatures_img[i]
+        idx_fin = idx_ini + int(nfeatures_img[i])
         # From features to words:
         if(options.use_fisher):
             visual_words[i,:] = predict_fishergmm(codebook, \
