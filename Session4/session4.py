@@ -568,33 +568,7 @@ def preprocess_train(D, options):
             " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
     else:
         # Aggregate data in a way alternative to PCA:
-        if(options.aggregate_alt_pca == 'mean'):
-            # We will collapse each row of D to its mean:
-            print 'Aggregating data with mean.'
-            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
-            for i in range(D.shape[0]):
-                D_agg[i,:] = np.mean(D[i,:])
-            D = D_agg
-        elif(options.aggregate_alt_pca == 'max'):
-            print 'Aggregating data with maximum.'
-            # We will collapse each row of D to its maximum:
-            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
-            for i in range(D.shape[0]):
-                D_agg[i,:] = max(D[i,:])
-            D = D_agg
-        elif(options.aggregate_alt_pca == 'mean-max'):
-            print 'Aggregating data with mean and maximum.'
-            # We will collapse each row of D to a vector with
-            # its mean and its maximum:
-            D_agg = np.zeros((D.shape[0], 2), dtype=np.float32)
-            for i in range(D.shape[0]):
-                D_agg[i,:] = (np.mean(D[i,:]), max(D[i,:]))
-            D = D_agg
-        else:
-            if(options.aggregate_alt_pca != 'none'):
-                print 'aggregate_alt_pca option not recognized.'
-                sys.stdout.flush()
-                sys.exit()
+        D = alternative_aggregate(D, options.aggregate_alt_pca)
     return D, stdSlr_features, pca
     
     
@@ -608,33 +582,48 @@ def preprocess_apply(D, stdSlr_features, pca, options):
             D = pca.transform(D)
     else:
         # Aggregate data in a way alternative to PCA:
-        if(options.aggregate_alt_pca == 'mean'):
-            print 'Aggregating data with mean.'
-            # We will collapse each row of D to its mean:
-            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
-            for i in range(D.shape[0]):
-                D_agg[i,:] = np.mean(D[i,:])
-            D = D_agg
-        elif(options.aggregate_alt_pca == 'max'):
-            print 'Aggregating data with maximum.'
-            # We will collapse each row of D to its maximum:
-            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
-            for i in range(D.shape[0]):
-                D_agg[i,:] = max(D[i,:])
-            D = D_agg
-        elif(options.aggregate_alt_pca == 'mean-max'):
-            print 'Aggregating data with mean and maximum.'
-            # We will collapse each row of D to a vector with
-            # its mean and its maximum:
-            D_agg = np.zeros((D.shape[0], 2), dtype=np.float32)
-            for i in range(D.shape[0]):
-                D_agg[i,:] = (np.mean(D[i,:]), max(D[i,:]))
-            D = D_agg
-        else:
-            if(options.aggregate_alt_pca != 'none'):
-                print 'aggregate_alt_pca option not recognized.'
-                sys.stdout.flush()
-                sys.exit()
+        D = alternative_aggregate(D, options.aggregate_alt_pca)
+    return D
+
+
+##############################################################################
+def alternative_aggregate(D, aggregate_alt_pca):
+    # Aggregate data in a way alternative to PCA:
+    if(aggregate_alt_pca == 'mean'):
+        print 'Aggregating data with mean.'
+        # We will collapse each row of D to its mean:
+        D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
+        for i in range(D.shape[0]):
+            D_agg[i,:] = np.mean(D[i,:])
+        D = D_agg
+    elif(aggregate_alt_pca == 'max'):
+        print 'Aggregating data with maximum.'
+        # We will collapse each row of D to its maximum:
+        D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
+        for i in range(D.shape[0]):
+            D_agg[i,:] = max(D[i,:])
+        D = D_agg
+    elif(aggregate_alt_pca == 'mean-max'):
+        print 'Aggregating data with mean and maximum.'
+        # We will collapse each row of D to a vector with
+        # its mean and its maximum:
+        D_agg = np.zeros((D.shape[0], 2), dtype=np.float32)
+        for i in range(D.shape[0]):
+            D_agg[i,:] = (np.mean(D[i,:]), max(D[i,:]))
+        D = D_agg
+    elif(aggregate_alt_pca == 'mean-max-min'):
+        print 'Aggregating data with mean, maximum and minimum.'
+        # We will collapse each row of D to a vector with
+        # its mean, its maximum and its minimum:
+        D_agg = np.zeros((D.shape[0], 3), dtype=np.float32)
+        for i in range(D.shape[0]):
+            D_agg[i,:] = (np.mean(D[i,:]), max(D[i,:]), min(D[i,:]))
+        D = D_agg
+    else:
+        if(aggregate_alt_pca != 'none'):
+            print 'aggregate_alt_pca option not recognized.'
+            sys.stdout.flush()
+            sys.exit()
     return D
 
 
@@ -852,4 +841,4 @@ class general_options_class:
     use_fisher = 0 # Use fisher vectors.
     system = 'SVM' # Select the system to apply (SVM, BoW, FV)
     layer_cnn_bow = 'block5_conv2' # Layer from which to extract the features.
-    aggregate_alt_pca = 'none' # Alternative ways to PCA to aggregate data ('none', 'mean', 'max', 'mean-max')
+    aggregate_alt_pca = 'none' # Alternative ways to PCA to aggregate data ('none', 'mean', 'max', 'mean-max', 'mean-max-min')

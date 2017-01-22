@@ -30,6 +30,9 @@ options.scale_features = 1
 options.apply_pca = 1
 options.ncomp_pca = 100
 
+# Alternative to PCA:
+options.aggregate_alt_pca = 'none' # ('none', 'mean', 'max', 'mean-max', 'mean-max-min')
+
 # Use Fisher Vectors?
 options.use_fisher = 1
 

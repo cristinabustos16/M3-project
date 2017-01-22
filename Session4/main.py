@@ -25,7 +25,7 @@ options.apply_pca = 0
 options.ncomp_pca = 100
 
 # Alternative to PCA:
-options.aggregate_alt_pca = 'mean-max' # ('none', 'mean', 'max', 'mean-max')
+options.aggregate_alt_pca = 'mean-max-min' # ('none', 'mean', 'max', 'mean-max', 'mean-max-min')
 
 # Use Fisher Vectors?
 options.use_fisher = 0
