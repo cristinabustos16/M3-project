@@ -10,6 +10,8 @@ from session4 import test_system_cnn_SVM
 from session4 import train_system_cnn
 from session4 import test_system_cnn
 from session4 import create_cnn
+from session4 import check_options
+
 # Select options:
 options = general_options_class()
 
@@ -21,7 +23,7 @@ options.layer_cnn_bow = 'block5_conv2'
 
 # Codebook options:
 options.compute_codebook = 1
-options.kmeans = 64
+options.kmeans = 32
 
 # PCA and scaling:
 options.scale_features = 1
@@ -55,6 +57,9 @@ options.system = 'BoW'
 #######################################################
 
 start = time.time()
+    
+# Check consistency of options:
+check_options(options)
 
 # Create the cross-validation subsets:
 if options.compute_subsets:
@@ -75,6 +80,9 @@ accuracy = np.zeros(options.k_cv)
 
 # Train and evaluate k times:
 for i in range(options.k_cv):
+    print ''
+    print 'Round ' + str(i+1) + '/' + str(options.k_cv) + ' of cross-validation...'
+    
     # First, we create a list with the names of the files we will use for
     # training. These are the files in all the subsets except the i-th one.
     # The same for the labels.

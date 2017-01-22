@@ -31,6 +31,9 @@ from tools_yael import compute_codebook_gmm
 def main_cnn_SVM(options):
     start = time.time()
     
+    # Check consistency of options:
+    check_options(options)
+    
     # Read the train and test files
     train_images_filenames, \
         test_images_filenames, \
@@ -54,6 +57,9 @@ def main_cnn_SVM(options):
 ##############################################################################
 def main_cnn(options):
     start = time.time()
+    
+    # Check consistency of options:
+    check_options(options)
     
     # Read the train and test files
     train_images_filenames, \
@@ -193,6 +199,21 @@ def compute_codebook_kmeans(kmeans, D):
     end = time.time()
     print 'Done in ' + str(end-init) + ' secs.'
     return codebook
+    
+
+##############################################################################
+def check_options(options):
+    # Check that the are no incompatible options selected.
+    raise_error = 0
+    
+    if((options.apply_pca == 1) & (options.aggregate_alt_pca != 'none')):
+        print 'Incompatible options: apply_pca and aggreate_alt_pca'
+        raise_error = 1
+    
+    # If any error was found, stop the execution.
+    if(raise_error):
+        sys.stdout.flush()
+        sys.exit()
     
 
 ##############################################################################
@@ -545,25 +566,36 @@ def preprocess_train(D, options):
         D = pca.transform(D)
         print "Explained variance with ", options.ncomp_pca , \
             " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
-    return D, stdSlr_features, pca
-    
-    
-##############################################################################
-def preprocess_fit(D, options):
-    # Fit the scaler and the PCA with the training features.
-    stdSlr_features = StandardScaler()
-    if(options.scale_features == 1):
-        stdSlr_features = StandardScaler().fit(D)
-        D_scaled = stdSlr_features.transform(D)
     else:
-        D_scaled = D
-    pca = PCA(n_components = options.ncomp_pca)
-    if(options.apply_pca == 1):
-        print "Fitting principal components analysis..."
-        pca.fit(D_scaled)
-        print "Explained variance with ", options.ncomp_pca , \
-            " components: ", sum(pca.explained_variance_ratio_) * 100, '%'
-    return stdSlr_features, pca
+        # Aggregate data in a way alternative to PCA:
+        if(options.aggregate_alt_pca == 'mean'):
+            # We will collapse each row of D to its mean:
+            print 'Aggregating data with mean.'
+            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
+            for i in range(D.shape[0]):
+                D_agg[i,:] = np.mean(D[i,:])
+            D = D_agg
+        elif(options.aggregate_alt_pca == 'max'):
+            print 'Aggregating data with maximum.'
+            # We will collapse each row of D to its maximum:
+            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
+            for i in range(D.shape[0]):
+                D_agg[i,:] = max(D[i,:])
+            D = D_agg
+        elif(options.aggregate_alt_pca == 'mean-max'):
+            print 'Aggregating data with mean and maximum.'
+            # We will collapse each row of D to a vector with
+            # its mean and its maximum:
+            D_agg = np.zeros((D.shape[0], 2), dtype=np.float32)
+            for i in range(D.shape[0]):
+                D_agg[i,:] = (np.mean(D[i,:]), max(D[i,:]))
+            D = D_agg
+        else:
+            if(options.aggregate_alt_pca != 'none'):
+                print 'aggregate_alt_pca option not recognized.'
+                sys.stdout.flush()
+                sys.exit()
+    return D, stdSlr_features, pca
     
     
 ##############################################################################
@@ -572,7 +604,37 @@ def preprocess_apply(D, stdSlr_features, pca, options):
     if(options.scale_features == 1):
         D = stdSlr_features.transform(D)
     if(options.apply_pca == 1):
-        D = pca.transform(D)
+        if(options.aggregate_alt_pca == 'none'):
+            D = pca.transform(D)
+    else:
+        # Aggregate data in a way alternative to PCA:
+        if(options.aggregate_alt_pca == 'mean'):
+            print 'Aggregating data with mean.'
+            # We will collapse each row of D to its mean:
+            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
+            for i in range(D.shape[0]):
+                D_agg[i,:] = np.mean(D[i,:])
+            D = D_agg
+        elif(options.aggregate_alt_pca == 'max'):
+            print 'Aggregating data with maximum.'
+            # We will collapse each row of D to its maximum:
+            D_agg = np.zeros((D.shape[0], 1), dtype=np.float32)
+            for i in range(D.shape[0]):
+                D_agg[i,:] = max(D[i,:])
+            D = D_agg
+        elif(options.aggregate_alt_pca == 'mean-max'):
+            print 'Aggregating data with mean and maximum.'
+            # We will collapse each row of D to a vector with
+            # its mean and its maximum:
+            D_agg = np.zeros((D.shape[0], 2), dtype=np.float32)
+            for i in range(D.shape[0]):
+                D_agg[i,:] = (np.mean(D[i,:]), max(D[i,:]))
+            D = D_agg
+        else:
+            if(options.aggregate_alt_pca != 'none'):
+                print 'aggregate_alt_pca option not recognized.'
+                sys.stdout.flush()
+                sys.exit()
     return D
 
 
@@ -790,3 +852,4 @@ class general_options_class:
     use_fisher = 0 # Use fisher vectors.
     system = 'SVM' # Select the system to apply (SVM, BoW, FV)
     layer_cnn_bow = 'block5_conv2' # Layer from which to extract the features.
+    aggregate_alt_pca = 'none' # Alternative ways to PCA to aggregate data ('none', 'mean', 'max', 'mean-max')
