@@ -9,6 +9,9 @@ options = general_options_class()
 # Use CNN to extract features:
 options.features_from_cnn = 1
 
+# Use Fisher Vectors?
+options.use_fisher = 1
+
 # Codebook options:
 options.compute_codebook = 1
 options.kmeans = 512
