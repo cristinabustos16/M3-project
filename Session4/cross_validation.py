@@ -13,17 +13,23 @@ from session4 import create_cnn
 # Select options:
 options = general_options_class()
 
+# Use CNN to extract features:
+options.features_from_cnn = 1
+
 # Codebook options:
 options.compute_codebook = 1
 options.kmeans = 64
 
 # PCA and scaling:
 options.scale_features = 1
-options.apply_pca = 0
-options.ncomp_pca = 100
+options.apply_pca = 1
+options.ncomp_pca = 10
 
 # Use Fisher Vectors?
 options.use_fisher = 1
+
+# Select classifier:
+options.classifier = 'svm'
 
 # Cross-validation options:
 options.compute_subsets = 1
@@ -86,6 +92,7 @@ for i in range(options.k_cv):
         
         detector = create_cnn('block5_conv2')
         clf, codebook, stdSlr_VW, stdSlr_features, pca = train_system_cnn(trainset_images_filenames, trainset_labels, detector, options)
+        print '+++++++++++++++++++++entrene++++++++++++++++++++++++'
         accuracy[i] = test_system_cnn(validation_images_filenames, validation_labels, \
                                     detector, codebook, clf, stdSlr_VW, \
                                     stdSlr_features, pca, options)
