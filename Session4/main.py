@@ -11,12 +11,15 @@ options.features_from_cnn = 1
 
 # Codebook options:
 options.compute_codebook = 1
-options.kmeans = 512
+options.kmeans = 32
 
 # PCA and scaling:
-options.scale_features = 1
+options.scale_features = 0
 options.apply_pca = 1
 options.ncomp_pca = 100
+
+# Use Fisher Vectors?
+options.use_fisher = 1
 
 # Select classifier:
 options.classifier = 'svm'
@@ -46,8 +49,10 @@ options.system = 'BoW'
 
 # Call the main program:
 if options.system == 'SVM':
+    print 'hola'
     accuracy, running_time = main_cnn_SVM(options)
 elif options.system == 'BoW':
+    print 'carola'
     accuracy, running_time = main_cnn(options)
 
 

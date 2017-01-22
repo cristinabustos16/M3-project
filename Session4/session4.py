@@ -24,8 +24,8 @@ from keras.applications.vgg16 import VGG16
 from keras.models import Model
 
 sys.path.append('.')
-from tools_yael_fake import predict_fishergmm
-from tools_yael_fake import compute_codebook_gmm
+from tools_yael import predict_fishergmm
+from tools_yael import compute_codebook_gmm
 
 ##############################################################################
 def main_cnn_SVM(options):
