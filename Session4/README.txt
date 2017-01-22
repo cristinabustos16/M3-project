@@ -16,8 +16,9 @@ All the functions are in the script session4.py, which are called from main.py a
 
 Below are listed some of the functionalities of the system, with the corresponding option that enables it (1 for enabling, 0 for disabling):
 To use the output of a convolutional layer as features for BoW or Fisher, use “system = ‘BoW’”; otherwise, to directly classify with the output of the last FC layer of the CNN, switch “system = ‘FC’”.
-Fisher Vectors:        “use_fisher”
-PCA:                “apply_pca”
+Select layer from which to extract features:    “layer_cnn_bow”
+Fisher Vectors:          “use_fisher”
+PCA:                     “apply_pca”
 Scale before PCA:        “scale_features”
 
 More options are available, which are described at the end of file session4.py.
