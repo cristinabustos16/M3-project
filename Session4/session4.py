@@ -393,11 +393,6 @@ def train_SVM(X, L, SVM_options):
 # Train the SVM, given some options and the training data.
     print 'Training the SVM classifier...'
     
-    print X.__class__.__name__
-    print X.shape
-    print L.__class__.__name__
-    print len(L)
-    
     sys.stdout.flush()
     if(SVM_options.kernel == 'linear'):
         clf = svm.SVC(kernel='linear', C = SVM_options.C, \
@@ -793,6 +788,5 @@ class general_options_class:
     percent_reduced_dataset = 10 # Percentage of the dataset to consider.
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
     use_fisher = 0 # Use fisher vectors.
-    features_from_cnn = 1 # Use a Convolutional Neural Network to extract the visual features.
     system = 'SVM' # Select the system to apply (SVM, BoW, FV)
     layer_cnn_bow = 'block5_conv2' # Layer from which to extract the features.
