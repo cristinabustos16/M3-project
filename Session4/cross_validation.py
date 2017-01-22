@@ -39,7 +39,7 @@ options.SVM_options.probability = 1
 
 # Evaluation options:
 options.compute_evaluation = 0
-options.system = 'SVM'
+options.system = 'BoW'
 
 #######################################################
 
