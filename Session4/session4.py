@@ -65,12 +65,14 @@ def main_cnn(options):
     print 'Loaded '+str(len(test_images_filenames))+' testing images filenames with classes ',set(test_labels)
     
     # Create the CNN:
-    detector = create_cnn('block5_conv2')
+    detector = create_cnn(options.layer_cnn_bow)
         
+    # Train:
     clf, codebook, stdSlr_VW, stdSlr_features, pca = \
             train_system_cnn(train_images_filenames, train_labels, \
                                 detector, options)
     
+    # Evaluate:
     accuracy = test_system_cnn(test_images_filenames, test_labels, \
                                 detector, codebook, clf, stdSlr_VW, \
                                 stdSlr_features, pca, options)
@@ -792,4 +794,5 @@ class general_options_class:
     fast_cross_validation = 0 # Use fast or slow cross-validation. The second one allows for more things.
     use_fisher = 0 # Use fisher vectors.
     features_from_cnn = 1 # Use a Convolutional Neural Network to extract the visual features.
-    system = 'SVM' #Select the system to apply (SVM, BoW, FV)
+    system = 'SVM' # Select the system to apply (SVM, BoW, FV)
+    layer_cnn_bow = 'block5_conv2' # Layer from which to extract the features.

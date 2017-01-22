@@ -16,6 +16,9 @@ options = general_options_class()
 # Use CNN to extract features:
 options.features_from_cnn = 1
 
+# Layer from which to extract the features (for BoW with CNN):
+options.layer_cnn_bow = 'block5_conv2'
+
 # Codebook options:
 options.compute_codebook = 1
 options.kmeans = 64
@@ -23,7 +26,7 @@ options.kmeans = 64
 # PCA and scaling:
 options.scale_features = 1
 options.apply_pca = 1
-options.ncomp_pca = 10
+options.ncomp_pca = 100
 
 # Use Fisher Vectors?
 options.use_fisher = 1
@@ -45,6 +48,8 @@ options.SVM_options.probability = 1
 
 # Evaluation options:
 options.compute_evaluation = 0
+
+# Classify output of FC layers (SVM), or use BoW (BoW):
 options.system = 'BoW'
 
 #######################################################
@@ -88,11 +93,13 @@ for i in range(options.k_cv):
     if options.system == 'SVM':
         cnn, clf, stdSlr, pca = train_system_cnn_SVM(trainset_images_filenames, trainset_labels, options)
         accuracy[i] = test_system_cnn_SVM(validation_images_filenames, validation_labels, cnn, stdSlr, pca, clf, options)
+    
     elif options.system == 'BoW':
-        
-        detector = create_cnn('block5_conv2')
+        # Create the CNN:
+        detector = create_cnn(options.layer_cnn_bow)
+        # Train:
         clf, codebook, stdSlr_VW, stdSlr_features, pca = train_system_cnn(trainset_images_filenames, trainset_labels, detector, options)
-        print '+++++++++++++++++++++entrene++++++++++++++++++++++++'
+        # Evaluate:
         accuracy[i] = test_system_cnn(validation_images_filenames, validation_labels, \
                                     detector, codebook, clf, stdSlr_VW, \
                                     stdSlr_features, pca, options)

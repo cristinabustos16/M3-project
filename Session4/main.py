@@ -14,7 +14,7 @@ options.use_fisher = 1
 
 # Codebook options:
 options.compute_codebook = 1
-options.kmeans = 32
+options.kmeans = 512
 
 # PCA and scaling:
 options.scale_features = 0
@@ -52,10 +52,8 @@ options.system = 'BoW'
 
 # Call the main program:
 if options.system == 'SVM':
-    print 'hola'
     accuracy, running_time = main_cnn_SVM(options)
 elif options.system == 'BoW':
-    print 'carola'
     accuracy, running_time = main_cnn(options)
 
 
