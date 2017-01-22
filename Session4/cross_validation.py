@@ -15,12 +15,15 @@ options = general_options_class()
 
 # Codebook options:
 options.compute_codebook = 1
-options.kmeans = 512
+options.kmeans = 64
 
 # PCA and scaling:
 options.scale_features = 1
-options.apply_pca = 1
-options.ncomp_pca = 10
+options.apply_pca = 0
+options.ncomp_pca = 100
+
+# Use Fisher Vectors?
+options.use_fisher = 1
 
 # Cross-validation options:
 options.compute_subsets = 1
@@ -36,7 +39,7 @@ options.SVM_options.probability = 1
 
 # Evaluation options:
 options.compute_evaluation = 0
-options.system = 'BoW'
+options.system = 'SVM'
 
 #######################################################
 
