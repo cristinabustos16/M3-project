@@ -3,7 +3,6 @@ from keras.preprocessing import image
 from keras.models import Model
 from keras.layers import Flatten
 from keras.layers import Dense, GlobalAveragePooling2D
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras import backend as K
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
@@ -44,31 +43,12 @@ def preprocess_input(x, dim_ordering='default'):
 base_model = VGG16(weights='imagenet')
 plot(base_model, to_file='modelVGG16a.png', show_shapes=True, show_layer_names=True)
 
-option='conv1'
-
-if option=='conv1':
-  x = base_model.get_layer('block5_conv1').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='conv2':
-  x = base_model.get_layer('block5_conv2').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='conv3':
-  x = base_model.get_layer('block5_conv3').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='pool':
-  x = base_model.get_layer('block5_pool').output
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
+x = base_model.get_layer('fc2').output
+x = base_model.layers[-2].output
+#x = base_model.get_layer('block5_pool').output
+#x = Flatten(name='flat')(x)
+#x = Dense(4096, activation='relu', name='fc')(x)
+x = Dense(8, activation='softmax',name='predictions')(x)
 
 model = Model(input=base_model.input, output=x)
 plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
@@ -125,7 +105,7 @@ print result
 
 # list all data in history
 
-if True:
+if False:
   # summarize history for accuracy
   plt.plot(history.history['acc'])
   plt.plot(history.history['val_acc'])
