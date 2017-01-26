@@ -82,17 +82,17 @@ def train_and_evaluate(optimizer, nepochs, batch_size):
             batch_size=batch_size,
             class_mode='categorical')
     
-    newmodel.fit_generator(train_generator,
-            samples_per_epoch=188,
-            nb_epoch=nepochs,
-            validation_data=validation_generator,
-            nb_val_samples=80)
-    
 #    newmodel.fit_generator(train_generator,
-#            samples_per_epoch=batch_size*(int(400*1881/1881//batch_size)+1),
+#            samples_per_epoch=188,
 #            nb_epoch=nepochs,
 #            validation_data=validation_generator,
-#            nb_val_samples=807)
+#            nb_val_samples=80)
+    
+    newmodel.fit_generator(train_generator,
+            samples_per_epoch=batch_size*(int(400*1881/1881//batch_size)+1),
+            nb_epoch=nepochs,
+            validation_data=validation_generator,
+            nb_val_samples=807)
     
     
 #    result = newmodel.evaluate_generator(test_generator, val_samples=807)
@@ -106,7 +106,7 @@ def train_and_evaluate(optimizer, nepochs, batch_size):
 
 #############################################################################
 def check_case(batch_size, nepochs, optimizer_name, learn_rate, momentum, cases_done):
-
+    # Check if the current case has been already done.
     select_params = 0
     for i in range(len(cases_done)):
         if cases_done[i][0] == batch_size and \
