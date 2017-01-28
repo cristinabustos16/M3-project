@@ -1,27 +1,33 @@
 from keras.applications.vgg16 import VGG16
 from keras.preprocessing import image
 from keras.models import Model
-from keras.layers import Flatten
+from keras.layers import Flatten, Dropout
 from keras.layers import Dense, GlobalAveragePooling2D
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras import backend as K
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
+from global_functions import general_options_class
+from global_functions import compute_and_save_confusion_matrix
+from keras.utils.np_utils import probas_to_classes
+from sklearn.preprocessing import label_binarize
 
 trainset = 'small'
 train_all_layers = True
 
+# Select options:
+options = general_options_class()
 if trainset == 'large':
-  train_data_dir='../../Databases/MIT/train'
+  options.train_data_dir='../../Databases/MIT/train'
 else:
-  train_data_dir='../../Databases/MIT/train_small'
-val_data_dir='../../Databases/MIT/validation'
-test_data_dir='../../Databases/MIT/test'
-img_width = 224
-img_height=224
-batch_size=32
-number_of_epoch=20
+  options.train_data_dir='../../Databases/MIT/train_small'
+options.number_of_epoch = 20
+options.batch_size = 16
+options.val_samples = options.batch_size*(int(400/options.batch_size))
+# options.test_samples = options.batch_size*(int(400/options.batch_size))
+options.model = 'dropout'
+options.drop_prob_fc = 0.5
 
 
 def preprocess_input(x, dim_ordering='default'):
@@ -58,15 +64,13 @@ x = Flatten(name='flat')(x)
 x = Dense(4096, activation='relu', name='fc')(x)
 x = Dense(8, activation='softmax',name='predictions')(x)
 
-
 model = Model(input=base_model.input, output=x)
 plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
 if train_all_layers == False
     for layer in base_model.layers:
       layer.trainable = False
     
-    
-model.compile(loss='categorical_crossentropy',optimizer='adadelta', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy',optimizer= options.optimizer, metrics=['accuracy'])
 for layer in model.layers:
     print layer.name, layer.trainable
 
@@ -75,6 +79,7 @@ datagen = ImageDataGenerator(featurewise_center=False,
     samplewise_center=False,
     featurewise_std_normalization=False,
     samplewise_std_normalization=False,
+    # preprocessing_function=preprocess_input,
     rotation_range=0.,
     width_shift_range=0.,
     height_shift_range=0.,
@@ -87,31 +92,44 @@ datagen = ImageDataGenerator(featurewise_center=False,
     vertical_flip=False,
     rescale=None)
 
-train_generator = datagen.flow_from_directory(train_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
+train_generator = datagen.flow_from_directory(options.train_data_dir,
+        target_size=(options.img_width, options.img_height),
+        batch_size=options.batch_size,
         class_mode='categorical')
 
-test_generator = datagen.flow_from_directory(test_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
+test_generator = datagen.flow_from_directory(options.test_data_dir,
+        target_size=(options.img_width, options.img_height),
+        batch_size=options.batch_size,
         class_mode='categorical')
 
-validation_generator = datagen.flow_from_directory(val_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
+validation_generator = datagen.flow_from_directory(options.val_data_dir,
+        target_size=(options.img_width, options.img_height),
+        batch_size=options.batch_size,
         class_mode='categorical')
 
 history=model.fit_generator(train_generator,
-        samples_per_epoch=batch_size*(int(400*1881/1881//batch_size)+1),
-        nb_epoch=number_of_epoch,
+        samples_per_epoch=options.batch_size*(int(200/options.batch_size)+1),
+        nb_epoch=options.number_of_epoch,
         validation_data=validation_generator,
-        nb_val_samples=807)
+        nb_val_samples=options.val_samples)
 
 
-result = model.evaluate_generator(test_generator, val_samples=807)
+result = model.evaluate_generator(test_generator, val_samples=options.val_samples)
 print result
 
+predictions = model.predict_generator(test_generator, options.val_samples)
+y_classes = probas_to_classes(predictions)
+
+compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
+
+# classes = test_generator.classes
+
+# y_proba = model.predict(test_generator)
+# y_classes = probas_to_classes(y_proba)
+# compute_and_save_confusion_matrix(y_classes, y_proba, options, 'prueba_1')
+
+# Binarize the labels
+# binary_labels = label_binarize(test_generator, classes=test_generator.classes)
 
 # list all data in history
 
