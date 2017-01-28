@@ -140,13 +140,14 @@ if nprevious > 0:
     for filename in previous_files:
         case = cPickle.load(open(dirResults + filename, 'r'))
         parameters = [] # List with parameters of a given case.
-        for i in range(len(case)):
+        for i in range(len(case)-1):
             parameters.append(case[i][1])
         cases_done.append(parameters)
 
 # Parameters to search:
 batch_size_vec = [10, 20, 40, 60, 80, 100]
-nepochs_vec = [10, 50, 100]
+#nepochs_vec = [10, 50, 100]
+nepochs_vec = [10, 20, 30]
 optimizer_name_vec = ['SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adam', 'Adamax', 'Nadam']
 learn_rate_vec = [0.0001, 0.001, 0.01, 0.1, 0.2, 0.3]
 momentum_vec = [0.0, 0.2, 0.4, 0.6, 0.8, 0.9]
@@ -210,6 +211,7 @@ for i in range(ntrials):
     case.append(['optimizer_name', optimizer_name])
     case.append(['learn_rate', learn_rate])
     case.append(['momentum', momentum])
+    case.append(['accuracy', accuracy])
     cPickle.dump(case, open(filename, "w"))
 
 
