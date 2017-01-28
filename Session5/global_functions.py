@@ -67,12 +67,11 @@ class general_options_class:
     img_height = 224
     number_of_epoch = 20
     batch_size = 32
-    val_samples = 807
-    # test_samples = 400
+    val_samples = 416
     file_name = 'test'
     show_plots = 1
     save_plots = 1
     compute_evaluation = 0  # Compute the ROC, confusion matrix, and write report.
     optimizer = 'adadelta'
-    model = 'pool'
+    dropout_enabled = False
     drop_prob_fc = 0.5

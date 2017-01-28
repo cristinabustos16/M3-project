@@ -14,7 +14,7 @@ from keras.utils.np_utils import probas_to_classes
 from sklearn.preprocessing import label_binarize
 
 trainset = 'small'
-train_all_layers = True
+train_all_layers = False
 
 # Select options:
 options = general_options_class()
@@ -22,11 +22,12 @@ if trainset == 'large':
   options.train_data_dir='../../Databases/MIT/train'
 else:
   options.train_data_dir='../../Databases/MIT/train_small'
+
 options.number_of_epoch = 20
-options.batch_size = 16
-options.val_samples = options.batch_size*(int(400/options.batch_size))
-# options.test_samples = options.batch_size*(int(400/options.batch_size))
-options.model = 'dropout'
+options.batch_size = 32
+# options.val_samples = options.batch_size*(int(200/options.batch_size)+1)
+options.val_samples = 807
+options.dropout_enabled = True
 options.drop_prob_fc = 0.5
 
 
@@ -59,14 +60,15 @@ x = base_model.get_layer('block5_pool').output
 x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv1')(x)
 x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv2')(x)
 x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv3')(x)
-#x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
 x = Flatten(name='flat')(x)
 x = Dense(4096, activation='relu', name='fc')(x)
+if options.dropout_enabled:
+    x = Dropout(options.drop_prob_fc, name='FC Dropout')(x)
 x = Dense(8, activation='softmax',name='predictions')(x)
 
 model = Model(input=base_model.input, output=x)
 plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
-if train_all_layers == False
+if train_all_layers == False:
     for layer in base_model.layers:
       layer.trainable = False
     
@@ -108,28 +110,20 @@ validation_generator = datagen.flow_from_directory(options.val_data_dir,
         class_mode='categorical')
 
 history=model.fit_generator(train_generator,
-        samples_per_epoch=options.batch_size*(int(200/options.batch_size)+1),
+        samples_per_epoch=options.batch_size*(int(400/options.batch_size)+1),
         nb_epoch=options.number_of_epoch,
         validation_data=validation_generator,
         nb_val_samples=options.val_samples)
 
 
 result = model.evaluate_generator(test_generator, val_samples=options.val_samples)
-print result
+print result[1]
 
-predictions = model.predict_generator(test_generator, options.val_samples)
-y_classes = probas_to_classes(predictions)
 
-compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
-
-# classes = test_generator.classes
-
-# y_proba = model.predict(test_generator)
-# y_classes = probas_to_classes(y_proba)
-# compute_and_save_confusion_matrix(y_classes, y_proba, options, 'prueba_1')
-
-# Binarize the labels
-# binary_labels = label_binarize(test_generator, classes=test_generator.classes)
+# predictions = model.predict_generator(test_generator, options.val_samples)
+# y_classes = probas_to_classes(predictions)
+#
+# compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
 
 # list all data in history
 
