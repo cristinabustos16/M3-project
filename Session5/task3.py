@@ -1,22 +1,34 @@
 from keras.applications.vgg16 import VGG16
 from keras.preprocessing import image
 from keras.models import Model
-from keras.layers import Flatten
+from keras.layers import Flatten, Dropout
 from keras.layers import Dense, GlobalAveragePooling2D
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras import backend as K
 from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
+from global_functions import general_options_class
+from global_functions import compute_and_save_confusion_matrix
+from keras.utils.np_utils import probas_to_classes
+from sklearn.preprocessing import label_binarize
 
+trainset = 'small'
+train_all_layers = False
 
-train_data_dir='../../Databases/MIT/train'
-val_data_dir='../../Databases/MIT/validation'
-test_data_dir='../../Databases/MIT/test'
-img_width = 224
-img_height=224
-batch_size=32
-number_of_epoch=20
+# Select options:
+options = general_options_class()
+if trainset == 'large':
+  options.train_data_dir='../../Databases/MIT/train'
+else:
+  options.train_data_dir='../../Databases/MIT/train_small'
+
+options.number_of_epoch = 20
+options.batch_size = 32
+# options.val_samples = options.batch_size*(int(200/options.batch_size)+1)
+options.val_samples = 807
+options.dropout_enabled = True
+options.drop_prob_fc = 0.5
 
 
 def preprocess_input(x, dim_ordering='default'):
@@ -44,46 +56,23 @@ def preprocess_input(x, dim_ordering='default'):
 base_model = VGG16(weights='imagenet')
 plot(base_model, to_file='modelVGG16a.png', show_shapes=True, show_layer_names=True)
 
-option='nose'
-
-if option=='conv1':
-  x = base_model.get_layer('block5_conv1').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='conv2':
-  x = base_model.get_layer('block5_conv2').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='conv3':
-  x = base_model.get_layer('block5_conv3').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='pool':
-  x = base_model.get_layer('block5_pool').output
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='nose':
-  x = base_model.layers[-2].output
-  x = Dense(8, activation='softmax',name='predictions')(x)
-else:
-  x = base_model.get_layer('fc2').output
-  x = base_model.layers[-2].output
-  x = Dense(8, activation='softmax',name='predictions')(x)
+x = base_model.get_layer('block5_pool').output
+x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv1')(x)
+x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv2')(x)
+x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv3')(x)
+x = Flatten(name='flat')(x)
+x = Dense(4096, activation='relu', name='fc')(x)
+if options.dropout_enabled:
+    x = Dropout(options.drop_prob_fc, name='FC Dropout')(x)
+x = Dense(8, activation='softmax',name='predictions')(x)
 
 model = Model(input=base_model.input, output=x)
 plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
-for layer in base_model.layers:
-    layer.trainable = False
+if train_all_layers == False:
+    for layer in base_model.layers:
+      layer.trainable = False
     
-    
-model.compile(loss='categorical_crossentropy',optimizer='adadelta', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy',optimizer= options.optimizer, metrics=['accuracy'])
 for layer in model.layers:
     print layer.name, layer.trainable
 
@@ -123,31 +112,36 @@ datagen_validation = ImageDataGenerator(featurewise_center=False,
     vertical_flip=False,
     rescale=None)
 
-train_generator = datagen_train.flow_from_directory(train_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
+train_generator = datagen_train.flow_from_directory(options.train_data_dir,
+        target_size=(options.img_width, options.img_height),
+        batch_size=options.batch_size,
         class_mode='categorical')
 
-#test_generator = datagen.flow_from_directory(test_data_dir,
-#        target_size=(img_width, img_height),
-#        batch_size=batch_size,
-#        class_mode='categorical')
+test_generator = datagen_validation.flow_from_directory(options.test_data_dir,
+        target_size=(options.img_width, options.img_height),
+        batch_size=options.batch_size,
+        class_mode='categorical')
 
-validation_generator = datagen_validation.flow_from_directory(val_data_dir,
-        target_size=(img_width, img_height),
-        batch_size=batch_size,
+validation_generator = datagen_validation.flow_from_directory(options.val_data_dir,
+        target_size=(options.img_width, options.img_height),
+        batch_size=options.batch_size,
         class_mode='categorical')
 
 history=model.fit_generator(train_generator,
-        samples_per_epoch=batch_size*(int(400*1881/1881//batch_size)+1),
-        nb_epoch=number_of_epoch,
+        samples_per_epoch=options.batch_size*(int(400/options.batch_size)+1),
+        nb_epoch=options.number_of_epoch,
         validation_data=validation_generator,
-        nb_val_samples=807)
+        nb_val_samples=options.val_samples)
 
 
-result = model.evaluate_generator(validation_generator, val_samples=807)
+result = model.evaluate_generator(test_generator, val_samples=options.val_samples)
 print result
 
+
+# predictions = model.predict_generator(test_generator, options.val_samples)
+# y_classes = probas_to_classes(predictions)
+#
+# compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
 
 # list all data in history
 
