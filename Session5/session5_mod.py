@@ -20,13 +20,16 @@ from sklearn.preprocessing import label_binarize
 # img_width = 224
 # img_height=224
 
+cut_on_layer = 'block5_conv2'
+add_maxpool = 1
+add_dropout = 1
+
 # Select options:
 options = general_options_class()
-options.cut_on_layer = 'block5_conv2'
-options.add_maxpool = 1
-options.add_dropout = 1
-options.number_of_epoch = 20
+#options.number_of_epoch = 20
+options.number_of_epoch = 2
 options.batch_size = 16
+#options.val_samples = options.batch_size*(int(400/options.batch_size))
 options.val_samples = options.batch_size*(int(200/options.batch_size))
 # options.test_samples = options.batch_size*(int(400/options.batch_size))
 options.model = 'dropout'
@@ -55,20 +58,20 @@ def preprocess_input(x, dim_ordering='default'):
     
 # create the base pre-trained model
 base_model = VGG16(weights='imagenet')
-plot(base_model, to_file='modelVGG16a.png', show_shapes=True, show_layer_names=True)
+plot(base_model, to_file='modelVGG16.png', show_shapes=True, show_layer_names=True)
 
 # Build new model:
-x = base_model.get_layer(options.cut_on_layer).output
-if(options.add_maxpool):
+x = base_model.get_layer(cut_on_layer).output
+if(add_maxpool):
     x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
 x = Flatten(name='flat')(x)
 x = Dense(4096, activation='relu', name='fc')(x)
-if(options.add_dropout):
+if(add_dropout):
     x = Dropout(options.drop_prob_fc, name='FC Dropout')(x)
 x = Dense(8, activation='softmax',name='predictions')(x)
 
 model = Model(input=base_model.input, output=x)
-plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
+plot(model, to_file='newmodel.png', show_shapes=True, show_layer_names=True)
 for layer in base_model.layers:
      layer.trainable = False
     
@@ -119,10 +122,24 @@ history=model.fit_generator(train_generator,
 result = model.evaluate_generator(test_generator, val_samples=options.val_samples)
 print result
 
-predictions = model.predict_generator(test_generator, options.val_samples)
+predictions = model.predict_generator(generator = test_generator, \
+                            val_samples = options.val_samples)
 y_classes = probas_to_classes(predictions)
 
-compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
+print y_classes.__class__.__name__
+print predictions.__class__.__name__
+
+print set(y_classes)
+print y_classes.shape
+print y_classes[3]
+print y_classes[5]
+print y_classes[25]
+print predictions.shape
+print predictions[0,:]
+print predictions[10,:]
+print predictions[29,:]
+
+#compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
 
 # classes = test_generator.classes
 

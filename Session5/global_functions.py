@@ -67,7 +67,7 @@ class general_options_class:
     img_height = 224
     number_of_epoch = 20
     batch_size = 32
-    val_samples = 807
+    val_samples = 200
     # test_samples = 400
     file_name = 'test'
     show_plots = 1
@@ -76,3 +76,6 @@ class general_options_class:
     optimizer = 'adadelta'
     model = 'pool'
     drop_prob_fc = 0.5
+    cut_on_layer = 'block5_conv2' # Layer where tu cut the original model
+    add_maxpool = 1 # Add a maxpool after the layer where we cut
+    add_dropout = 1 # Use dropout
