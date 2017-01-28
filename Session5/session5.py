@@ -1,7 +1,7 @@
 from keras.applications.vgg16 import VGG16
 from keras.preprocessing import image
 from keras.models import Model
-from keras.layers import Flatten
+from keras.layers import Flatten, Dropout
 from keras.layers import Dense, GlobalAveragePooling2D
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras import backend as K
@@ -44,7 +44,8 @@ def preprocess_input(x, dim_ordering='default'):
 base_model = VGG16(weights='imagenet')
 plot(base_model, to_file='modelVGG16a.png', show_shapes=True, show_layer_names=True)
 
-option='conv1'
+option='dropout'
+drop_prob_fc = 0.5
 
 if option=='conv1':
   x = base_model.get_layer('block5_conv1').output
@@ -69,12 +70,17 @@ elif option=='pool':
   x = Flatten(name='flat')(x)
   x = Dense(4096, activation='relu', name='fc')(x)
   x = Dense(8, activation='softmax',name='predictions')(x)
+elif option == 'dropout':
+  x = base_model.get_layer('block5_pool').output
+  x = Flatten(name='flat')(x)
+  x = Dense(4096, activation='relu', name='fc')(x)
+  x = Dropout(drop_prob_fc, name='FC Dropout')(x)
+  x = Dense(8, activation='softmax',name='predictions')(x)
 
 model = Model(input=base_model.input, output=x)
 plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
 for layer in base_model.layers:
-    layer.trainable = False
-    
+     layer.trainable = False
     
 model.compile(loss='categorical_crossentropy',optimizer='adadelta', metrics=['accuracy'])
 for layer in model.layers:
@@ -85,6 +91,7 @@ datagen = ImageDataGenerator(featurewise_center=False,
     samplewise_center=False,
     featurewise_std_normalization=False,
     samplewise_std_normalization=False,
+    # preprocessing_function=preprocess_input,
     rotation_range=0.,
     width_shift_range=0.,
     height_shift_range=0.,
@@ -116,10 +123,10 @@ history=model.fit_generator(train_generator,
         samples_per_epoch=batch_size*(int(400*1881/1881//batch_size)+1),
         nb_epoch=number_of_epoch,
         validation_data=validation_generator,
-        nb_val_samples=807)
+        nb_val_samples=400)
 
 
-result = model.evaluate_generator(test_generator, val_samples=807)
+result = model.evaluate_generator(test_generator, val_samples=400)
 print result
 
 

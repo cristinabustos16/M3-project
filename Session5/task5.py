@@ -2,7 +2,7 @@
 from keras.applications.vgg16 import VGG16
 from keras.models import Model
 from keras.utils.visualize_util import plot
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 from keras.layers import Flatten
 from keras.preprocessing.image import ImageDataGenerator
 from keras.optimizers import SGD, RMSprop, Adagrad, Adadelta, Adam, Adamax, Nadam
@@ -13,7 +13,7 @@ import sys
 
 
 #############################################################################
-def train_and_evaluate(optimizer, nepochs, batch_size):
+def train_and_evaluate(optimizer, nepochs, batch_size, dropout_probability):
 
     # Directories:
 #    train_data_dir='./minitrain'
@@ -30,12 +30,14 @@ def train_and_evaluate(optimizer, nepochs, batch_size):
     
     # Load VGG model
     base_model = VGG16(weights='imagenet')
-    
-    # New model
+
+    #Task1 - Best choice with Dropout
     x = base_model.get_layer('block5_pool').output
-    x = Flatten(name='aplanado')(x)
-    x = Dense(1000, activation='relu',name='oculta')(x)
-    x = Dense(8, activation='softmax',name='predictions')(x)
+    x = Flatten(name='flat')(x)
+    x = Dense(4096, activation='relu', name='fc')(x)
+    x = Dropout(dropout_probability, name='FC Dropout')(x)
+    x = Dense(8, activation='softmax', name='predictions')(x)
+
     newmodel = Model(input=base_model.input, output=x)
     plot(newmodel, to_file='newmodel.png', show_shapes=True, show_layer_names=True)
     
@@ -105,7 +107,7 @@ def train_and_evaluate(optimizer, nepochs, batch_size):
 
 
 #############################################################################
-def check_case(batch_size, nepochs, optimizer_name, learn_rate, momentum, cases_done):
+def check_case(batch_size, nepochs, optimizer_name, learn_rate, momentum, dropout_probability, cases_done):
     # Check if the current case has been already done.
     select_params = 0
     for i in range(len(cases_done)):
@@ -113,7 +115,8 @@ def check_case(batch_size, nepochs, optimizer_name, learn_rate, momentum, cases_
                 cases_done[i][1] == nepochs and \
                 cases_done[i][2] == optimizer_name and \
                 cases_done[i][3] == learn_rate and \
-                cases_done[i][4] == momentum:
+                cases_done[i][4] == momentum and \
+                cases_done[i][5] == dropout_probability:
             select_params = 1
             break
     return select_params
@@ -151,6 +154,7 @@ nepochs_vec = [10, 20, 30]
 optimizer_name_vec = ['SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adam', 'Adamax', 'Nadam']
 learn_rate_vec = [0.0001, 0.001, 0.01, 0.1, 0.2, 0.3]
 momentum_vec = [0.0, 0.2, 0.4, 0.6, 0.8, 0.9]
+drop_prob_vec = [0, 0.5]
 
 #batch_size_vec = [10]
 #nepochs_vec = [2]
@@ -172,11 +176,12 @@ for i in range(ntrials):
         optimizer_name = np.random.choice(optimizer_name_vec)
         learn_rate = np.random.choice(learn_rate_vec)
         momentum = np.random.choice(momentum_vec)
+        dropout_probability = np.random.choice(drop_prob_vec)
         # Check this case has not been done yet:
-        select_params = check_case(batch_size, nepochs, optimizer_name, learn_rate, momentum, cases_done)
+        select_params = check_case(batch_size, nepochs, optimizer_name, learn_rate, momentum, dropout_probability, cases_done)
     print 'Done!'
     # Update previous cases:
-    parameters = [batch_size, nepochs, optimizer_name, learn_rate, momentum]
+    parameters = [batch_size, nepochs, optimizer_name, learn_rate, momentum, dropout_probability]
     cases_done.append(parameters)
     
     # Prepare the optimizer:
@@ -196,7 +201,7 @@ for i in range(ntrials):
         optimizer = Nadam(lr = learn_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, schedule_decay=0.004)
     
     # Train and evaluate the model:    
-    accuracy = train_and_evaluate(optimizer, nepochs, batch_size)
+    accuracy = train_and_evaluate(optimizer, nepochs, batch_size, dropout_probability)
     
     # Save results:
     filename = dirResults + 'case_' + str(i+nprevious) + '.dat'
@@ -211,6 +216,7 @@ for i in range(ntrials):
     case.append(['optimizer_name', optimizer_name])
     case.append(['learn_rate', learn_rate])
     case.append(['momentum', momentum])
+    case.append(['dropout_probability', dropout_probability])
     case.append(['accuracy', accuracy])
     cPickle.dump(case, open(filename, "w"))
 
