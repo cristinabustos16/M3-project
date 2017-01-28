@@ -9,8 +9,13 @@ from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 
+trainset = 'small'
+train_all_layers = True
 
-train_data_dir='../../Databases/MIT/train'
+if trainset == 'large':
+  train_data_dir='../../Databases/MIT/train'
+else:
+  train_data_dir='../../Databases/MIT/train_small'
 val_data_dir='../../Databases/MIT/validation'
 test_data_dir='../../Databases/MIT/test'
 img_width = 224
@@ -44,36 +49,21 @@ def preprocess_input(x, dim_ordering='default'):
 base_model = VGG16(weights='imagenet')
 plot(base_model, to_file='modelVGG16a.png', show_shapes=True, show_layer_names=True)
 
-option='conv1'
+x = base_model.get_layer('block5_pool').output
+x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv1')(x)
+x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv2')(x)
+x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv3')(x)
+#x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
+x = Flatten(name='flat')(x)
+x = Dense(4096, activation='relu', name='fc')(x)
+x = Dense(8, activation='softmax',name='predictions')(x)
 
-if option=='conv1':
-  x = base_model.get_layer('block5_conv1').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='conv2':
-  x = base_model.get_layer('block5_conv2').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='conv3':
-  x = base_model.get_layer('block5_conv3').output
-  x = MaxPooling2D((2,2),strides=(2,2),name='pool')(x)
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
-elif option=='pool':
-  x = base_model.get_layer('block5_pool').output
-  x = Flatten(name='flat')(x)
-  x = Dense(4096, activation='relu', name='fc')(x)
-  x = Dense(8, activation='softmax',name='predictions')(x)
 
 model = Model(input=base_model.input, output=x)
 plot(model, to_file='modelVGG16b.png', show_shapes=True, show_layer_names=True)
-for layer in base_model.layers:
-    layer.trainable = False
+if train_all_layers == False
+    for layer in base_model.layers:
+      layer.trainable = False
     
     
 model.compile(loss='categorical_crossentropy',optimizer='adadelta', metrics=['accuracy'])
