@@ -9,12 +9,12 @@ from keras.utils.visualize_util import plot
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 from global_functions import general_options_class
-from keras.optimizers import SGD, RMSprop, Adagrad, Adadelta, Adam, Adamax, Nadam
 from global_functions import compute_and_save_confusion_matrix
 from keras.utils.np_utils import probas_to_classes
+from keras.utils.np_utils import to_categorical
 from sklearn.preprocessing import label_binarize
 
-trainset = 'large'
+trainset = 'small'
 train_all_layers = False
 
 # Select options:
@@ -24,15 +24,13 @@ if trainset == 'large':
 else:
   options.train_data_dir='../../Databases/MIT/train_small'
 
-options.number_of_epoch = 20
-options.batch_size = 16
+options.number_of_epoch = 2
+options.batch_size = 32
 # options.val_samples = options.batch_size*(int(200/options.batch_size)+1)
 options.val_samples = 807
-options.dropout_enabled = False
+options.dropout_enabled = True
 options.drop_prob_fc = 0.5
-learn_rate = 0.0001
 
-optimizer = Adadelta(lr=learn_rate, rho=0.95, epsilon=1e-08, decay=0)
 
 def preprocess_input(x, dim_ordering='default'):
     if dim_ordering == 'default':
@@ -75,7 +73,7 @@ if train_all_layers == False:
     for layer in base_model.layers:
       layer.trainable = False
     
-model.compile(loss='categorical_crossentropy',optimizer= optimizer, metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy',optimizer= options.optimizer, metrics=['accuracy'])
 for layer in model.layers:
     print layer.name, layer.trainable
 
@@ -90,6 +88,7 @@ datagen_train = ImageDataGenerator(featurewise_center=False,
     height_shift_range=0.2,
     shear_range=0.,
     zoom_range=0.1,
+    zca_whitening=False,
     channel_shift_range=0.,
     fill_mode='nearest',
     cval=0.,
@@ -119,6 +118,9 @@ train_generator = datagen_train.flow_from_directory(options.train_data_dir,
         target_size=(options.img_width, options.img_height),
         batch_size=options.batch_size,
         class_mode='categorical')
+#        save_to_dir= 'aumented_data/',
+#        save_prefix= 'augmented',
+#        save_format='.png')
 
 test_generator = datagen_validation.flow_from_directory(options.test_data_dir,
         target_size=(options.img_width, options.img_height),
@@ -138,13 +140,12 @@ history=model.fit_generator(train_generator,
 
 
 result = model.evaluate_generator(test_generator, val_samples=options.val_samples)
-print result
+print result[1]
 
-
-# predictions = model.predict_generator(test_generator, options.val_samples)
-# y_classes = probas_to_classes(predictions)
-#
-# compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
+probabilities = model.predict_generator(test_generator, options.val_samples)
+predictions = probas_to_classes(probabilities)
+y_classes = test_generator.classes
+compute_and_save_confusion_matrix(y_classes, predictions, options, 'prueba_2')
 
 # list all data in history
 
