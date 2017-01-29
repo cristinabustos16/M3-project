@@ -3,8 +3,8 @@ import os
 import cPickle
 
 # Directory for saving results:
-#dirResults = './random_search/'
-dirResults = './random_search_nodropout/'
+dirResults = './random_search/'
+# dirResults = './random_search_nodropout/'
     
 # Load previous results:
 cases_done = [] # Initialize list with done cases.
@@ -36,4 +36,5 @@ print 'nepochs = ' + str(cases_done[best_case][1])
 print 'optimizer_name = ' + str(cases_done[best_case][2])
 print 'learn_rate = ' + str(cases_done[best_case][3])
 print 'momentum = ' + str(cases_done[best_case][4])
-print 'accuracy = ' + str(accuracy)
+print 'dropout_probability = ' + str(cases_done[best_case][5])
+print 'accuracy = ' + str(max_accuracy)
