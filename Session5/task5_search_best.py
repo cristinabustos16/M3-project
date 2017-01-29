@@ -4,7 +4,7 @@ import cPickle
 
 # Directory for saving results:
 #dirResults = './random_search/'
-dirResults = './random_search_nodropout/'
+dirResults = './random_search/'
     
 # Load previous results:
 cases_done = [] # Initialize list with done cases.
