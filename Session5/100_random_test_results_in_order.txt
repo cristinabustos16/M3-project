@@ -1,0 +1,1001 @@
+100 previous cases found.
+Best parameters found:
+batch_size = 80
+nepochs = 16
+optimizer_name = Adadelta
+learn_rate = 1e-05
+momentum = 0.6
+dropout_probability = 0.0
+accuracy = 0.114583336593
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adagrad
+learn_rate = 0.01
+momentum = 0.4
+dropout_probability = 0.0
+accuracy = 0.115384615385
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adamax
+learn_rate = 0.1
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.120192307692
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 0.1
+momentum = 0.6
+dropout_probability = 0.5
+accuracy = 0.121739140023
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 10
+optimizer_name = SGD
+learn_rate = 0.3
+momentum = 0.2
+dropout_probability = 0.75
+accuracy = 0.12195122242
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 0.1
+momentum = 0.4
+dropout_probability = 0.0
+accuracy = 0.122093033392
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adamax
+learn_rate = 0.01
+momentum = 0.0
+dropout_probability = 0.5
+accuracy = 0.122549019608
+
+********************************************
+Best parameters found:
+batch_size = 40
+nepochs = 10
+optimizer_name = RMSprop
+learn_rate = 0.3
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.122619047761
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 20
+optimizer_name = Adamax
+learn_rate = 0.01
+momentum = 0.0
+dropout_probability = 0.5
+accuracy = 0.123170733543
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 30
+optimizer_name = Adamax
+learn_rate = 0.3
+momentum = 0.0
+dropout_probability = 0.5
+accuracy = 0.123170733906
+
+********************************************
+Best parameters found:
+batch_size = 24
+nepochs = 30
+optimizer_name = Adamax
+learn_rate = 0.01
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.123762379889
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.001
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.123798076923
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.01
+momentum = 0.6
+dropout_probability = 0.25
+accuracy = 0.123809531686
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 10
+optimizer_name = SGD
+learn_rate = 0.1
+momentum = 0.4
+dropout_probability = 0.75
+accuracy = 0.124390245756
+
+********************************************
+Best parameters found:
+batch_size = 100
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.3
+momentum = 0.2
+dropout_probability = 0.25
+accuracy = 0.124444438352
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adagrad
+learn_rate = 1e-06
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.125
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adamax
+learn_rate = 0.1
+momentum = 0.8
+dropout_probability = 0.25
+accuracy = 0.125
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.01
+momentum = 0.2
+dropout_probability = 0.5
+accuracy = 0.125
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 40
+optimizer_name = RMSprop
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.125
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adagrad
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.125
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.1
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.125
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 20
+optimizer_name = Adamax
+learn_rate = 0.3
+momentum = 0.9
+dropout_probability = 0.0
+accuracy = 0.12560975915
+
+********************************************
+Best parameters found:
+batch_size = 80
+nepochs = 10
+optimizer_name = Adam
+learn_rate = 0.01
+momentum = 0.2
+dropout_probability = 0.0
+accuracy = 0.126136366955
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 30
+optimizer_name = RMSprop
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.126744195299
+
+********************************************
+Best parameters found:
+batch_size = 10
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 0.01
+momentum = 0.4
+dropout_probability = 0.75
+accuracy = 0.127160496182
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.1
+momentum = 0.6
+dropout_probability = 0.0
+accuracy = 0.127358490566
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 0.1
+momentum = 0.4
+dropout_probability = 0.25
+accuracy = 0.127403846154
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.3
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.127403846154
+
+********************************************
+Best parameters found:
+batch_size = 40
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.3
+momentum = 0.6
+dropout_probability = 0.5
+accuracy = 0.128571429423
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adagrad
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.128605769231
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 1e-06
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.129069776209
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.01
+momentum = 0.8
+dropout_probability = 0.25
+accuracy = 0.129716981132
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 1e-06
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.130232567877
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = RMSprop
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.131009615385
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adagrad
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.132211538462
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.01
+momentum = 0.6
+dropout_probability = 0.0
+accuracy = 0.134615384615
+
+********************************************
+Best parameters found:
+batch_size = 24
+nepochs = 30
+optimizer_name = Adamax
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.25
+accuracy = 0.134708741047
+
+********************************************
+Best parameters found:
+batch_size = 80
+nepochs = 20
+optimizer_name = Adagrad
+learn_rate = 0.5
+momentum = 0.4
+dropout_probability = 0.25
+accuracy = 0.13541666884
+
+********************************************
+Best parameters found:
+batch_size = 80
+nepochs = 10
+optimizer_name = Adadelta
+learn_rate = 0.001
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.161363640292
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 1e-05
+momentum = 0.4
+dropout_probability = 0.25
+accuracy = 0.193181818182
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = Adamax
+learn_rate = 1e-06
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.203125
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 1e-05
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.213953508367
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adadelta
+learn_rate = 0.001
+momentum = 0.0
+dropout_probability = 0.25
+accuracy = 0.261138613861
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 1e-05
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.337209324851
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 40
+optimizer_name = RMSprop
+learn_rate = 1e-06
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.406976772949
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.458139574805
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = RMSprop
+learn_rate = 1e-06
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.49504950495
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 30
+optimizer_name = RMSprop
+learn_rate = 0.0001
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.660465155923
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adadelta
+learn_rate = 0.01
+momentum = 0.2
+dropout_probability = 0.5
+accuracy = 0.75
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adadelta
+learn_rate = 0.01
+momentum = 0.4
+dropout_probability = 0.0
+accuracy = 0.762019230769
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adagrad
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.75
+accuracy = 0.766826923077
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.75
+accuracy = 0.796875
+
+********************************************
+Best parameters found:
+batch_size = 80
+nepochs = 10
+optimizer_name = Adagrad
+learn_rate = 0.0001
+momentum = 0.4
+dropout_probability = 0.75
+accuracy = 0.798863676461
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.810096153846
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = RMSprop
+learn_rate = 1e-05
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.813701923077
+
+********************************************
+Best parameters found:
+batch_size = 40
+nepochs = 10
+optimizer_name = Adam
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.814285749481
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.75
+accuracy = 0.816176470588
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 1e-06
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.817307692308
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.829326923077
+
+********************************************
+Best parameters found:
+batch_size = 100
+nepochs = 16
+optimizer_name = Adamax
+learn_rate = 0.0001
+momentum = 0.6
+dropout_probability = 0.0
+accuracy = 0.835999941826
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 40
+optimizer_name = Adam
+learn_rate = 1e-06
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.838942307692
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 10
+optimizer_name = RMSprop
+learn_rate = 0.0001
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.843023298785
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 1e-05
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.850490196078
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = RMSprop
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.852941176471
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.855198019802
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 1e-05
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.856617647059
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.6
+dropout_probability = 0.0
+accuracy = 0.858139578686
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = RMSprop
+learn_rate = 1e-05
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.860294117647
+
+********************************************
+Best parameters found:
+batch_size = 80
+nepochs = 16
+optimizer_name = Adam
+learn_rate = 0.0001
+momentum = 0.4
+dropout_probability = 0.0
+accuracy = 0.862500041723
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.75
+accuracy = 0.862980769231
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = RMSprop
+learn_rate = 1e-05
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.863861386139
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 40
+optimizer_name = Adagrad
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.75
+accuracy = 0.869767485663
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.0001
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.87037037037
+
+********************************************
+Best parameters found:
+batch_size = 10
+nepochs = 20
+optimizer_name = Adadelta
+learn_rate = 0.2
+momentum = 0.9
+dropout_probability = 0.25
+accuracy = 0.871604940038
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.0001
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.872596153846
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adamax
+learn_rate = 0.0001
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.878676470588
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.881944444444
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adam
+learn_rate = 0.0001
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.882075471698
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 40
+optimizer_name = Adamax
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.882352941176
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 40
+optimizer_name = Adam
+learn_rate = 1e-06
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.883578431373
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 40
+optimizer_name = Adagrad
+learn_rate = 0.0001
+momentum = 0.6
+dropout_probability = 0.5
+accuracy = 0.884259259259
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adadelta
+learn_rate = 1e-05
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.884615384615
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 40
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.891203703704
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adadelta
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.5
+accuracy = 0.891826923077
+
+********************************************
+Best parameters found:
+batch_size = 40
+nepochs = 20
+optimizer_name = Adadelta
+learn_rate = 0.2
+momentum = 0.9
+dropout_probability = 0.0
+accuracy = 0.892857140019
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 40
+optimizer_name = Adadelta
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.894230769231
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 30
+optimizer_name = Adamax
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.895833333333
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.896341456146
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 40
+optimizer_name = Adadelta
+learn_rate = 1e-05
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.896634615385
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.897277227723
+
+********************************************
+Best parameters found:
+batch_size = 20
+nepochs = 20
+optimizer_name = SGD
+learn_rate = 0.001
+momentum = 0.4
+dropout_probability = 0.5
+accuracy = 0.898780482571
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 20
+optimizer_name = Adadelta
+learn_rate = 1e-05
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.900240384615
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 40
+optimizer_name = Adadelta
+learn_rate = 1e-05
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.905814010043
+
+********************************************
+Best parameters found:
+batch_size = 60
+nepochs = 40
+optimizer_name = Adamax
+learn_rate = 0.001
+momentum = 0.8
+dropout_probability = 0.0
+accuracy = 0.907317112132
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adadelta
+learn_rate = 0.5
+momentum = 0.4
+dropout_probability = 0.0
+accuracy = 0.907407407407
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = Adadelta
+learn_rate = 0.001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.909722222222
+
+********************************************
+Best parameters found:
+batch_size = 32
+nepochs = 30
+optimizer_name = RMSprop
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.5
+accuracy = 0.910891089109
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adam
+learn_rate = 0.0001
+momentum = 0.4
+dropout_probability = 0.0
+accuracy = 0.920673076923
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 40
+optimizer_name = RMSprop
+learn_rate = 0.0001
+momentum = 0.8
+dropout_probability = 0.75
+accuracy = 0.925742574257
+
+********************************************
+Best parameters found:
+batch_size = 16
+nepochs = 20
+optimizer_name = Adadelta
+learn_rate = 0.0001
+momentum = 0.001
+dropout_probability = 0.0
+accuracy = 0.928921568627
+
+********************************************
