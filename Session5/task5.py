@@ -32,11 +32,15 @@ def train_and_evaluate(optimizer, nepochs, batch_size, dropout_probability):
     base_model = VGG16(weights='imagenet')
 
     #Task1 - Best choice with Dropout
-    x = base_model.get_layer('block5_pool').output
-    x = Flatten(name='flat')(x)
-    x = Dense(4096, activation='relu', name='fc')(x)
-    x = Dropout(dropout_probability, name='FC Dropout')(x)
-    x = Dense(8, activation='softmax', name='predictions')(x)
+	x = base_model.get_layer('block5_pool').output
+	x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv1')(x)
+	x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv2')(x)
+	x = Convolution2D(512, 3, 3, activation='relu', border_mode='valid', name='block6_conv3')(x)
+	x = Flatten(name='flat')(x)
+	x = Dense(4096, activation='relu', name='fc')(x)
+	if options.dropout_enabled:
+		x = Dropout(options.drop_prob_fc, name='FC Dropout')(x)
+	x = Dense(8, activation='softmax',name='predictions')(x)
 
     newmodel = Model(input=base_model.input, output=x)
     plot(newmodel, to_file='newmodel.png', show_shapes=True, show_layer_names=True)
