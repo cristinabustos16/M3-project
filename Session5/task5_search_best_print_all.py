@@ -1,6 +1,7 @@
 #### Get the results from the random search, and look for the best one.
 import os
 import cPickle
+import numpy as np
 
 # Directory for saving results:
 dirResults = './random_search/'
@@ -21,20 +22,24 @@ if nprevious > 0:
             parameters.append(case[i][1])
         cases_done.append(parameters)
 
-# Loop over the cases found, finding the best accuracy:
-best_case = 0
-max_accuracy = 0
+# Loop over the cases found and plot from min to max accuracy:
+
+accuracy_array = []
 for i in range(len(cases_done)):
     case = cases_done[i]
     accuracy = case[len(case)-1]
-    if(max_accuracy < accuracy):
-        best_case = i
-        max_accuracy = accuracy
-print 'Best parameters found:'
-print 'batch_size = ' + str(cases_done[best_case][0])
-print 'nepochs = ' + str(cases_done[best_case][1])
-print 'optimizer_name = ' + str(cases_done[best_case][2])
-print 'learn_rate = ' + str(cases_done[best_case][3])
-print 'momentum = ' + str(cases_done[best_case][4])
-print 'dropout_probability = ' + str(cases_done[best_case][5])
-print 'accuracy = ' + str(max_accuracy)
+    accuracy_array.append(accuracy)
+
+index_sorted = np.argsort(accuracy_array)
+
+for i in range(len(index_sorted)):
+    index = index_sorted[i]
+    print 'Best parameters found:'
+    print 'batch_size = ' + str(cases_done[index][0])
+    print 'nepochs = ' + str(cases_done[index][1])
+    print 'optimizer_name = ' + str(cases_done[index][2])
+    print 'learn_rate = ' + str(cases_done[index][3])
+    print 'momentum = ' + str(cases_done[index][4])
+    print 'dropout_probability = ' + str(cases_done[index][5])
+    print 'accuracy = ' + str(cases_done[index][6])
+    print '\n' + '********************************************'
