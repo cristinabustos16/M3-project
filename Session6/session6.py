@@ -1,10 +1,11 @@
 from keras.models import Model
-from keras.layers import Input, Dense, Flatten
+from keras.layers import Input, Dense, Flatten, Dropout
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 from keras import backend as K
+from keras.layers.noise import GaussianNoise
 
 train_data_dir='../../Databases/MIT/train'
 val_data_dir='../../Databases/MIT/validation'
@@ -12,8 +13,9 @@ test_data_dir='../../Databases/MIT/test'
 img_width =128
 img_height=128
 batch_size=32
-number_of_epoch=100
+number_of_epoch=30
 val_samples=200
+train_samples = 1706
 
 def preprocess_input(x, dim_ordering='default'):
     if dim_ordering == 'default':
@@ -70,16 +72,16 @@ test_generator = datagen.flow_from_directory(test_data_dir,
 
 #Create the model
 inputs = Input(batch_shape=(None,img_width,img_height,3))
-#x = Convolution2D(8, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv1')(inputs)
-x = Convolution2D(16, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv2')(inputs)
+x = GaussianNoise(0.01)(inputs)
+x = Convolution2D(16, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv1')(x)
 x = MaxPooling2D((3, 3), strides=(3, 3), name='pool1')(x)
 x = Convolution2D(32, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv3')(x)
 x = MaxPooling2D((2, 2), strides=(2, 2), name='pool2')(x)
+x = Dropout(0.5, name='FC Dropout')(x)
 x = BatchNormalization()(x)
 x = Flatten(name='flatten')(x)
 x = Dense(100, activation='relu', name='fc1')(x)
 x = Dense(100, activation='relu', name='fc2')(x)
-#x = Dropout(0.5, name='FC Dropout')(x)
 x = Dense(8, activation='softmax',name='predictions')(x)
 model = Model(inputs, x, name='example')
 
@@ -90,7 +92,7 @@ model.summary()
 
 #Fit the model
 history=model.fit_generator(train_generator,
-        samples_per_epoch=batch_size*(int(1706/batch_size)+1),
+        samples_per_epoch=batch_size*(int(train_samples/batch_size)+1),
         nb_epoch=number_of_epoch,
         validation_data=validation_generator,
         nb_val_samples=val_samples)
