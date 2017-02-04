@@ -1,21 +1,21 @@
 from keras.models import Model
 from keras.layers import Input, Dense, Flatten, Dropout
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
+from keras.layers.normalization import BatchNormalization
 from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 from keras import backend as K
+from keras.layers.noise import GaussianNoise
 
 train_data_dir='../../Databases/MIT/train'
 val_data_dir='../../Databases/MIT/validation'
 test_data_dir='../../Databases/MIT/test'
-img_width  = 224
-img_height = 224
-batch_size = 32
-number_of_epoch = 20
-#val_samples = 400
-val_samples = 200
-train_samples = 1706
-#train_samples = 1881
+img_width =128
+img_height=128
+batch_size=32
+number_of_epoch=80
+val_samples=200
+train_samples = 8000
 
 def preprocess_input(x, dim_ordering='default'):
     if dim_ordering == 'default':
@@ -47,13 +47,13 @@ datagen = ImageDataGenerator(featurewise_center=False,
     width_shift_range=0.,
     height_shift_range=0.,
     shear_range=0.,
-    zoom_range=0.,
+    zoom_range=0.2,
     channel_shift_range=0.,
     fill_mode='nearest',
     cval=0.,
     horizontal_flip=False,
     vertical_flip=False,
-    rescale=None)
+    rescale=0.2)
 
 train_generator = datagen.flow_from_directory(train_data_dir,
         target_size=(img_width, img_height),
@@ -72,26 +72,28 @@ test_generator = datagen.flow_from_directory(test_data_dir,
 
 #Create the model
 inputs = Input(batch_shape=(None,img_width,img_height,3))
-x = Convolution2D(8, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv1')(inputs)
-x = Convolution2D(16, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv2')(x)
-x = MaxPooling2D((3, 3), strides=(3, 3), name='pool1')(x)
+x = GaussianNoise(0.01)(inputs)
+x = Convolution2D(16, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv1')(x)
+x = MaxPooling2D((2, 2), strides=(2, 2), name='pool1')(x)
 x = Convolution2D(32, 5, 5, activation='relu', border_mode='valid', subsample=(3,3), name='conv3')(x)
 x = MaxPooling2D((2, 2), strides=(2, 2), name='pool2')(x)
+x = BatchNormalization()(x)
 x = Flatten(name='flatten')(x)
-x = Dense(100, activation='relu', name='fc1')(x)
-x = Dense(100, activation='relu', name='fc2')(x)
-#x = Dropout(0.5, name='FC Dropout')(x)
+x = Dense(200, activation='relu', name='fc1')(x)
+x = Dropout(0.5, name='FC Dropout1')(x)
+x = Dense(200, activation='relu', name='fc2')(x)
+x = Dropout(0.5, name='FC Dropout2')(x)
 x = Dense(8, activation='softmax',name='predictions')(x)
 model = Model(inputs, x, name='example')
 
 #Compile model
-model.compile(loss='categorical_crossentropy', optimizer='SGD', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 model.summary()
 
 #Fit the model
 history=model.fit_generator(train_generator,
-        samples_per_epoch=batch_size*(int(train_samples/batch_size)),
+        samples_per_epoch=batch_size*(int(train_samples/batch_size)+1),
         nb_epoch=number_of_epoch,
         validation_data=validation_generator,
         nb_val_samples=val_samples)
@@ -116,5 +118,5 @@ plt.savefig('loss.jpg')
 
 #Evaluate the model
 result = model.evaluate_generator(test_generator, val_samples=val_samples)
-print('Test acuracy: ' + str(result[1]*100) + '%')
+print('Test accuracy: ' + str(result[1]*100) + '%')
 print('Test loss: ' + str(result[0]))
