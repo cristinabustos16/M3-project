@@ -10,8 +10,8 @@ from keras.layers.noise import GaussianNoise
 train_data_dir='../../Databases/MIT/train'
 val_data_dir='../../Databases/MIT/validation'
 test_data_dir='../../Databases/MIT/test'
-img_width =224
-img_height=224
+img_width =128
+img_height=128
 batch_size=32
 number_of_epoch=80
 val_samples=200
